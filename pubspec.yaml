@@ -46,13 +46,17 @@ dependencies:
   share_plus: ^10.1.2
   package_info_plus: ^8.1.1
   intl: ^0.19.0
+  crypto: ^3.0.7
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # 单测里 mock flutter_secure_storage 的平台接口（auth_test.dart）。
+  # 单测里 mock flutter_secure_storage 的平台接口（auth_test.dart），
+  # 以及 mock flutter_vless 的平台接口注入 fake 状态（vpn_engine_test.dart）。
   flutter_secure_storage_platform_interface: ^1.1.2
+  flutter_vless_platform_interface: ^1.1.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

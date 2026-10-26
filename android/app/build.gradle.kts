@@ -55,3 +55,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// M9B / T9.8：MainActivity 里用 androidx.core.content.FileProvider 安装 APK。
+// Flutter 模板不带这份显式依赖，补上（版本交给各插件对齐，不写死）。
+dependencies {
+    implementation("androidx.core:core-ktx:1.13.1")
+}

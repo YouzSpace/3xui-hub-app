@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider 暴露的路径白名单（M9B / T9.8）。
+  只暴露缓存目录：APK 下载到 getTemporaryDirectory()（= cacheDir），
+  cache-path 即对应这里；外部存储一律不开放。
+-->
+<paths>
+    <cache-path name="apk_cache" path="." />
+</paths>

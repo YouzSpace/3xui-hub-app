@@ -2,11 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/announcements/announcements_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/home/home_page.dart';
+import '../../features/invite/invite_page.dart';
+import '../../features/nodes/nodes_page.dart';
+import '../../features/nodes/nodes_routes.dart';
+import '../../features/payment/payment_webview_page.dart';
+import '../../features/plans/order_history_page.dart';
+import '../../features/plans/plans_page.dart';
+import '../../features/plans/plans_routes.dart';
+import '../../features/settings/my_info_page.dart';
+import '../../features/settings/settings_page.dart';
+import '../../features/settings/settings_routes.dart';
+import '../../features/settings/split_tunnel_page.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/tutorials/tutorial_detail_page.dart';
+import '../../features/tutorials/tutorials_page.dart';
 import '../../providers/auth_providers.dart';
-import '../ui/state_views.dart';
 import 'transitions.dart';
 
 /// 路由表（T1.6 + T2.5）：
@@ -36,51 +49,61 @@ final GoRouter appRouter = GoRouter(
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
-        StatefulShellBranch(routes: [_shellRoute('/', const HomePage())]),
-        StatefulShellBranch(routes: [_shellRoute('/nodes', null, '节点', Icons.dns_outlined)]),
-        StatefulShellBranch(routes: [_shellRoute('/plans', null, '套餐', Icons.storefront_outlined)]),
-        StatefulShellBranch(routes: [_shellRoute('/invite', null, '邀请', Icons.card_giftcard)]),
-        StatefulShellBranch(routes: [_shellRoute('/settings', null, '我的', Icons.person_outline)]),
+        StatefulShellBranch(routes: [_fadeRoute('/', const HomePage())]),
+        StatefulShellBranch(routes: [_fadeRoute(NodesRoutes.nodes, const NodesPage())]),
+        StatefulShellBranch(routes: [_fadeRoute(PlansRoutes.plans, const PlansPage())]),
+        StatefulShellBranch(routes: [_fadeRoute('/invite', const InvitePage())]),
+        StatefulShellBranch(
+            routes: [_fadeRoute(SettingsRoutes.settings, const SettingsPage())]),
       ],
     ),
     GoRoute(
-      path: '/orders',
+      path: PlansRoutes.payment,
       pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state, child: const _PlaceholderPage('订单记录')),
+          state: state, child: PaymentWebviewPage(args: state.extra as PaymentArgs?)),
     ),
     GoRoute(
-      path: '/tutorials',
+      path: PlansRoutes.orders,
       pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state, child: const _PlaceholderPage('使用教程')),
+          state: state, child: const OrderHistoryPage()),
+    ),
+    GoRoute(
+      path: SettingsRoutes.tutorials,
+      pageBuilder: (context, state) => AppTransitions.slideFromRight(
+          state: state, child: const TutorialsPage()),
     ),
     GoRoute(
       path: '/tutorials/:id',
-      pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state,
-          child: _PlaceholderPage('教程详情 #${state.pathParameters['id']}')),
+      pageBuilder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return AppTransitions.slideFromRight(
+            state: state, child: TutorialDetailPage(id: id));
+      },
     ),
     GoRoute(
-      path: '/payment',
+      path: SettingsRoutes.splitTunnel,
       pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state, child: const _PlaceholderPage('支付')),
+          state: state, child: const SplitTunnelPage()),
     ),
     GoRoute(
-      path: '/split-tunnel',
+      path: SettingsRoutes.myInfo,
       pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state, child: const _PlaceholderPage('分应用代理')),
+          state: state, child: const MyInfoPage()),
+    ),
+    GoRoute(
+      path: '/announcements',
+      pageBuilder: (context, state) => AppTransitions.slideFromRight(
+          state: state, child: const AnnouncementsPage()),
     ),
   ],
 );
 
-/// 一个 shell 分支（带标题/图标的是占位页，M5-M8 各自实现）。
-GoRoute _shellRoute(String path, Widget? child, [String? title, IconData? icon]) {
+/// shell 分支页：淡入切换（与 M1 一致）。
+GoRoute _fadeRoute(String path, Widget child) {
   return GoRoute(
     path: path,
-    pageBuilder: (context, state) => AppTransitions.fadeLift(
-      state: state,
-      child: child ??
-          _PlaceholderPage(title ?? '', icon: icon),
-    ),
+    pageBuilder: (context, state) =>
+        AppTransitions.fadeLift(state: state, child: child),
   );
 }
 
@@ -90,24 +113,5 @@ class _TokenListenable extends ChangeNotifier {
     container.listen<String?>(tokenProvider, (prev, next) {
       notifyListeners();
     });
-  }
-}
-
-/// M2-M8 各功能页的占位。
-class _PlaceholderPage extends StatelessWidget {
-  final String title;
-  final IconData? icon;
-
-  const _PlaceholderPage(this.title, {this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: EmptyView(
-        icon: icon ?? Icons.construction,
-        text: '$title页面将在后续阶段实现',
-      ),
-    );
   }
 }

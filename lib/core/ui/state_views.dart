@@ -80,6 +80,17 @@ class _StaggerInState extends State<_StaggerIn>
   @override
   void initState() {
     super.initState();
+    // 这里不能读 MediaQuery：initState 期间依赖 InheritedWidget 会抛
+    // 「dependOnInheritedWidgetOfExactType was called before initState()
+    // completed」。放到首帧之后再做判断，行为不变。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _start();
+    });
+  }
+
+  /// 首帧后启动：关闭动画则直接落到终态，否则按 index 依次浮现。
+  void _start() {
     if (MediaQuery.of(context).disableAnimations) {
       _controller.value = 1;
     } else {
