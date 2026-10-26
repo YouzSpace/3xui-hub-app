@@ -74,7 +74,8 @@ class _ConnectButtonState extends State<ConnectButton>
 
   bool get _reduced => MediaQuery.of(context).disableAnimations;
 
-  bool get _connecting => widget.status == VpnStatus.preparing ||
+  bool get _connecting =>
+      widget.status == VpnStatus.preparing ||
       widget.status == VpnStatus.connecting;
 
   @override
@@ -119,10 +120,15 @@ class _ConnectButtonState extends State<ConnectButton>
       } else {
         // 断开：光晕收缩消失 300ms，然后回未连接态。
         _halo.stop();
-        _halo.animateTo(0, duration: ConnectButton.collapse, curve: Motion.easeIn)
+        _halo
+            .animateTo(
+              0,
+              duration: ConnectButton.collapse,
+              curve: Motion.easeIn,
+            )
             .then((_) {
-          if (mounted) setState(() => _haloVisible = false);
-        });
+              if (mounted) setState(() => _haloVisible = false);
+            });
       }
     }
   }
@@ -142,23 +148,23 @@ class _ConnectButtonState extends State<ConnectButton>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
     final status = widget.status;
     final blocked = widget.blockedReason != null;
-    final busy = status == VpnStatus.preparing ||
+    final busy =
+        status == VpnStatus.preparing ||
         status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting;
 
     final bg = blocked
         ? cs.onSurface.withValues(alpha: 0.12)
         : _connecting
-            ? cs.primaryContainer
-            : cs.primary;
+        ? cs.primaryContainer
+        : cs.primary;
     final fg = blocked
         ? cs.onSurface.withValues(alpha: 0.38)
         : _connecting
-            ? cs.onPrimaryContainer
-            : cs.onPrimary;
+        ? cs.onPrimaryContainer
+        : cs.onPrimary;
 
     final label = switch (status) {
       VpnStatus.preparing || VpnStatus.connecting => '连接中…',
@@ -174,58 +180,42 @@ class _ConnectButtonState extends State<ConnectButton>
       button: true,
       enabled: !busy,
       label: blocked ? '$label，${widget.blockedReason}' : label,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: ConnectButton.diameter,
-            height: ConnectButton.diameter,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                if (_haloVisible)
-                  ConnectHaloRing(
-                    progress: _halo,
-                    diameter: ConnectButton.diameter,
-                    reduced: _reduced,
-                  ),
-                if (_connecting)
-                  ConnectPulseRing(
-                    progress: _pulse,
-                    diameter: ConnectButton.diameter,
-                    reduced: _reduced,
-                  ),
-                AnimatedScale(
-                  scale: pressed ? ConnectButton.pressedScale : 1,
-                  duration: pressed ? Motion.press : Motion.release,
-                  curve: Motion.spring,
-                  child: _core(
-                    bg: bg,
-                    fg: fg,
-                    busy: busy,
-                    icon: blocked
-                        ? widget.blockedIcon
-                        : status == VpnStatus.connected
-                            ? Icons.check
-                            : Icons.power_settings_new,
-                  ),
-                ),
-              ],
+      child: SizedBox(
+        width: ConnectButton.diameter,
+        height: ConnectButton.diameter,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            if (_haloVisible)
+              ConnectHaloRing(
+                progress: _halo,
+                diameter: ConnectButton.diameter,
+                reduced: _reduced,
+              ),
+            if (_connecting)
+              ConnectPulseRing(
+                progress: _pulse,
+                diameter: ConnectButton.diameter,
+                reduced: _reduced,
+              ),
+            AnimatedScale(
+              scale: pressed ? ConnectButton.pressedScale : 1,
+              duration: pressed ? Motion.press : Motion.release,
+              curve: Motion.spring,
+              child: _core(
+                bg: bg,
+                fg: fg,
+                busy: busy,
+                icon: blocked
+                    ? widget.blockedIcon
+                    : status == VpnStatus.connected
+                    ? Icons.check
+                    : Icons.power_settings_new,
+              ),
             ),
-          ),
-          const SizedBox(height: Sp.md),
-          // 文字只做颜色/内容变化（§3.3：时长每秒更新但数字不抖）。
-          AnimatedDefaultTextStyle(
-            duration: _reduced ? Motion.reduced : Motion.small,
-            curve: Motion.easeOut,
-            style: text.titleSmall!.copyWith(
-              color: blocked ? cs.onSurfaceVariant : cs.primary,
-              fontWeight: FontWeight.w600,
-            ),
-            child: Text(label),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -270,8 +260,9 @@ class _ConnectButtonState extends State<ConnectButton>
                     // 连接中图标旋转（1.2s/圈）；静止态锁在 0。
                     // key 用图标区分（电源 vs √），切换时才触发过渡动画。
                     key: ValueKey(icon),
-                    turns:
-                        _connecting ? _pulse : const AlwaysStoppedAnimation(0),
+                    turns: _connecting
+                        ? _pulse
+                        : const AlwaysStoppedAnimation(0),
                     child: Icon(icon, size: Sp.xxl + Sp.base, color: fg),
                   ),
           ),
