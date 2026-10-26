@@ -7,6 +7,7 @@ import '../../core/ui/state_views.dart';
 import '../../data/models/node.dart';
 import '../../vpn/vpn_controller.dart';
 import '../../vpn/vpn_state.dart';
+import '../shell/app_shell.dart';
 import 'node_tile.dart';
 import 'nodes_empty_view.dart';
 import 'nodes_provider.dart';
@@ -101,12 +102,12 @@ class _NodeList extends ConsumerWidget {
     final activeRaw = connected ? vpn.activeNode?.raw : null;
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         Sp.sm,
         Sp.sm,
         Sp.sm,
-        // 底栏浮在内容上（AppShell extendBody），留出玻璃高度。
-        Sp.xxl + Sp.base,
+        // 底栏浮在内容上（AppShell extendBody），底部留出底栏视觉高度 + 系统安全区。
+        appBottomBarHeight + MediaQuery.of(context).padding.bottom + Sp.base,
       ),
       itemCount: nodes.length,
       separatorBuilder: (_, _) => const Divider(indent: Sp.base, endIndent: Sp.base),

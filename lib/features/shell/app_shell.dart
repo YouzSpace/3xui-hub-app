@@ -15,6 +15,14 @@ import '../../providers/auth_providers.dart';
 ///
 /// branch 顺序固定：0=home、1=nodes、2=settings；
 /// 无套餐（planId==0）时不显示「节点」tab，只留首页 / 我的。
+/// 底栏内区高度（胶囊 32 + 间距 2 + label ≈ 50，取 72 给系统字体缩放留余量）。
+const double _bottomBarInnerHeight = 72;
+
+/// 底栏视觉总高度 = 内区 72 + 上下 padding 2*Sp.sm = 88。
+/// tab 页面（extendBody）ListView 底部 padding 用它 + 系统底部安全区，
+/// 避免最后一个元素被悬浮底栏挡住。
+const double appBottomBarHeight = _bottomBarInnerHeight + Sp.sm * 2;
+
 class AppShell extends ConsumerWidget {
   final StatefulNavigationShell shell;
 
@@ -53,7 +61,7 @@ class AppShell extends ConsumerWidget {
           child: GlassSurface(
             radius: BorderRadius.circular(Sp.xl),
             child: SizedBox(
-              height: 72,
+              height: _bottomBarInnerHeight,
               child: Row(
                 children: [
                   for (final (label, icon, _, branchIndex) in tabs)

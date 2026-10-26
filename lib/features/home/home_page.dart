@@ -10,6 +10,7 @@ import '../../widgets/traffic_card.dart';
 import '../announcements/notice_detail_dialog.dart';
 import '../announcements/site_content_providers.dart';
 import '../plans/plans_routes.dart';
+import '../shell/app_shell.dart';
 import '../update/update_dialog.dart';
 import '../update/update_providers.dart';
 import 'connect_area.dart';
@@ -177,12 +178,12 @@ class _HomeBody extends ConsumerWidget {
       onRefresh: () => ref.read(homeRefresherProvider)(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           Sp.base,
           Sp.sm,
           Sp.base,
-          // 底栏浮在内容上（AppShell extendBody），给玻璃留出高度。
-          Sp.xxl + Sp.base,
+          // 底栏浮在内容上（AppShell extendBody），底部留出底栏视觉高度 + 系统安全区。
+          appBottomBarHeight + MediaQuery.of(context).padding.bottom + Sp.base,
         ),
         children: [
           HomeStagger(index: 0, child: ConnectArea(profile: profile)),

@@ -10,6 +10,7 @@ import '../../vpn/blocked_apps.dart';
 // （只放行 http/https），避免后台配置项变成任意 scheme 的跳板。
 import '../feedback/feedback_launcher.dart';
 import '../plans/plans_routes.dart';
+import '../shell/app_shell.dart';
 import 'hidden_api_base_sheet.dart';
 import 'logout_service.dart';
 import 'protocol_switch_tile.dart';
@@ -34,12 +35,13 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           Sp.base,
           0,
           Sp.base,
-          // 底栏浮在内容上（AppShell extendBody），给玻璃留出高度。
-          Sp.xxl + Sp.base,
+          // 底栏浮在内容上（AppShell extendBody），底部留出底栏视觉高度 + 系统安全区，
+          // 避免退出登录按钮被悬浮底栏挡住。
+          appBottomBarHeight + MediaQuery.of(context).padding.bottom + Sp.base,
         ),
         children: [
           const SettingsSectionHeader('通用'),
