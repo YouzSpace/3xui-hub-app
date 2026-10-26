@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../features/announcements/announcements_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/home/home_page.dart';
-import '../../features/invite/invite_page.dart';
 import '../../features/nodes/nodes_page.dart';
 import '../../features/nodes/nodes_routes.dart';
 import '../../features/payment/payment_webview_page.dart';
@@ -51,11 +50,14 @@ final GoRouter appRouter = GoRouter(
       branches: [
         StatefulShellBranch(routes: [_fadeRoute('/home', const HomePage())]),
         StatefulShellBranch(routes: [_fadeRoute(NodesRoutes.nodes, const NodesPage())]),
-        StatefulShellBranch(routes: [_fadeRoute(PlansRoutes.plans, const PlansPage())]),
-        StatefulShellBranch(routes: [_fadeRoute('/invite', const InvitePage())]),
         StatefulShellBranch(
             routes: [_fadeRoute(SettingsRoutes.settings, const SettingsPage())]),
       ],
+    ),
+    GoRoute(
+      path: PlansRoutes.plans,
+      pageBuilder: (context, state) => AppTransitions.slideFromRight(
+          state: state, child: const PlansPage()),
     ),
     GoRoute(
       path: PlansRoutes.payment,

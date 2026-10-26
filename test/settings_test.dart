@@ -295,7 +295,7 @@ void main() {
       expect(find.text('主题模式'), findsOneWidget);
       expect(find.text('分应用代理'), findsOneWidget);
       expect(find.text('v1.0.0 (1)'), findsOneWidget);
-      expect(find.text('柚子云'), findsOneWidget);
+      expect(find.text('套餐'), findsOneWidget);
       expect(find.text('意见反馈'), findsOneWidget);
       expect(find.text('退出登录'), findsOneWidget);
       // 未登录（无 token）不显示协议切换。

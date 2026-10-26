@@ -9,6 +9,7 @@ import '../../vpn/blocked_apps.dart';
 // 反馈外链的打开方式复用 M7 的实现：它做了 scheme 白名单校验
 // （只放行 http/https），避免后台配置项变成任意 scheme 的跳板。
 import '../feedback/feedback_launcher.dart';
+import '../plans/plans_routes.dart';
 import 'hidden_api_base_sheet.dart';
 import 'logout_service.dart';
 import 'protocol_switch_tile.dart';
@@ -47,6 +48,7 @@ class SettingsPage extends ConsumerWidget {
           SettingsGroup(
             children: [
               _MyInfoTile(email: user?.email ?? ''),
+              const _PlansTile(),
               if (supportsProtocolSwitch(user, site))
                 ProtocolSwitchTile(current: user!.protocol),
             ],
@@ -54,11 +56,6 @@ class SettingsPage extends ConsumerWidget {
           const SettingsSectionHeader('关于'),
           SettingsGroup(
             children: [
-              SettingsTile(
-                title: '使用教程',
-                icon: Icons.menu_book_outlined,
-                onTap: () => context.push(SettingsRoutes.tutorials),
-              ),
               if (site.feedbackLink.isNotEmpty)
                 SettingsTile(
                   title: '意见反馈',
@@ -66,13 +63,6 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => _openFeedback(context, site.feedbackLink),
                 ),
               const _VersionTile(),
-              SettingsTile(
-                title: '站点信息',
-                icon: Icons.info_outline,
-                subtitle: site.siteTitle.isEmpty ? '未获取到站点信息' : site.siteTitle,
-                // 站点名只是展示，不做跳转。
-                onTap: null,
-              ),
             ],
           ),
           const SizedBox(height: Sp.lg),
@@ -144,6 +134,20 @@ class _MyInfoTile extends StatelessWidget {
       subtitle: email.isEmpty ? '未登录' : email,
       icon: Icons.person_outline,
       onTap: () => context.push(SettingsRoutes.myInfo),
+    );
+  }
+}
+
+/// 套餐：从底部导航收进「我的」页面（产品调整），跳 /plans。
+class _PlansTile extends StatelessWidget {
+  const _PlansTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsTile(
+      title: '套餐',
+      icon: Icons.storefront_outlined,
+      onTap: () => context.push(PlansRoutes.plans),
     );
   }
 }

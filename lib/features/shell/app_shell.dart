@@ -18,8 +18,6 @@ class AppShell extends StatelessWidget {
   static const _tabs = [
     ('首页', Icons.home_outlined, '/home'),
     ('节点', Icons.dns_outlined, '/nodes'),
-    ('套餐', Icons.storefront_outlined, '/plans'),
-    ('邀请', Icons.card_giftcard, '/invite'),
     ('我的', Icons.person_outline, '/settings'),
   ];
 
