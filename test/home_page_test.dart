@@ -231,9 +231,10 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.notifications_active_outlined), findsOneWidget);
+      expect(find.byKey(const Key('notice-unread-dot')), findsOneWidget);
     });
 
-    testWidgets('点击铃铛 → AlertDialog 全文', (tester) async {
+    testWidgets('点击铃铛 → 全文；点知道了后红点消失', (tester) async {
       contentRepo.announcement = '第一行\n第二行\n第三行';
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
@@ -249,12 +250,18 @@ void main() {
         findsOneWidget,
         reason: '详情弹窗展示全文',
       );
+
+      await tester.tap(find.text('知道了'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byKey(const Key('notice-unread-dot')), findsNothing);
     });
 
     testWidgets('无公告：铃铛不亮红点', (tester) async {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+      expect(find.byKey(const Key('notice-unread-dot')), findsNothing);
     });
   });
 

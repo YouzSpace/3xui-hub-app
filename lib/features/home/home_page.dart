@@ -42,14 +42,21 @@ class HomePage extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final site = ref.watch(siteContentProvider).valueOrNull;
     final announcement = site?.announcement.trim() ?? '';
+    final noticeRead = ref.watch(noticeReadProvider);
+    final hasNotice = announcement.isNotEmpty;
 
     return Scaffold(
       appBar: _HomeAppBar(
         siteTitle: site?.siteTitle ?? '',
-        hasNotice: announcement.isNotEmpty,
-        onNoticeTap: announcement.isEmpty
+        hasNotice: hasNotice,
+        hasUnread: hasNotice && !noticeRead,
+        onNoticeTap: !hasNotice
             ? null
-            : () => NoticeDetailDialog.show(context, announcement),
+            : () async {
+                await NoticeDetailDialog.show(context, announcement);
+                // 弹窗关闭即视为已读（点「知道了」或点空白关闭都算）。
+                ref.read(noticeReadProvider.notifier).state = true;
+              },
       ),
       body: user.when(
         loading: () => const Padding(
@@ -80,11 +87,13 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _HomeAppBar({
     required this.siteTitle,
     required this.hasNotice,
+    required this.hasUnread,
     required this.onNoticeTap,
   });
 
   final String siteTitle;
   final bool hasNotice;
+  final bool hasUnread;
   final VoidCallback? onNoticeTap;
 
   @override
@@ -134,11 +143,12 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 color: hasNotice ? cs.onSurface : cs.onSurfaceVariant,
               ),
             ),
-            if (hasNotice)
+            if (hasUnread)
               Positioned(
                 right: Sp.md,
                 top: Sp.md,
                 child: Container(
+                  key: const Key('notice-unread-dot'),
                   width: Sp.sm,
                   height: Sp.sm,
                   decoration:

@@ -18,6 +18,9 @@ import '../nodes/nodes_provider.dart';
 /// 写入后由首页消费并清空；只存内存，不落盘。
 final homeNoticeProvider = StateProvider<String?>((ref) => null);
 
+/// 公告是否已读（本次会话内存态，不落盘）：点「知道了」后红点消失。
+final noticeReadProvider = StateProvider<bool>((ref) => false);
+
 /// 套餐层面的连接阻断原因；null = 允许点击连接。
 ///
 /// 规则与 `VpnController.validate()` 的第 1–4 条一致（未登录 / 禁用 / 无套餐 /
