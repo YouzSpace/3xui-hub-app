@@ -6,6 +6,7 @@ import '../../core/theme/spacing.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/theme_mode_provider.dart';
 import '../../vpn/bypass_china.dart';
+import '../../vpn/vpn_controller.dart';
 // 反馈外链的打开方式复用 M7 的实现：它做了 scheme 白名单校验
 // （只放行 http/https），避免后台配置项变成任意 scheme 的跳板。
 import '../feedback/feedback_launcher.dart';
@@ -35,7 +36,17 @@ class SettingsPage extends ConsumerWidget {
     final site = ref.watch(siteConfigProvider).value ?? SiteConfig.empty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(
+        title: const Text('设置'),
+        actionsPadding: const EdgeInsets.only(right: Sp.sm),
+        actions: [
+          IconButton(
+            tooltip: '退出登录',
+            icon: const Icon(Icons.logout),
+            onPressed: () => _confirmAndLogout(context, ref),
+          ),
+        ],
+      ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           Sp.base,
@@ -69,8 +80,6 @@ class SettingsPage extends ConsumerWidget {
               const _VersionTile(),
             ],
           ),
-          const SizedBox(height: Sp.lg),
-          _LogoutButton(onDone: () => context.go(SettingsRoutes.login)),
         ],
       ),
     );
@@ -122,11 +131,17 @@ class _BypassChinaTile extends ConsumerWidget {
       icon: Icons.public_off_outlined,
       trailing: Switch(
         value: bypass,
-        onChanged: (_) => ref.read(bypassChinaProvider.notifier).set(!bypass),
+        onChanged: (_) => _toggle(ref, bypass),
       ),
-      onTap: () => ref.read(bypassChinaProvider.notifier).set(!bypass),
+      onTap: () => _toggle(ref, bypass),
       showChevron: false,
     );
+  }
+
+  /// 修改绕开国内：已连接时自动断开重连，让新路由规则生效。
+  Future<void> _toggle(WidgetRef ref, bool current) async {
+    await ref.read(bypassChinaProvider.notifier).set(!current);
+    await ref.read(vpnProvider.notifier).reconnectActive();
   }
 }
 
@@ -282,78 +297,32 @@ class _CheckUpdateTileState extends ConsumerState<_CheckUpdateTile> {
   }
 }
 
-/// 退出登录：红色 FilledButton + 二次确认，成功后由调用方跳 /login。
-class _LogoutButton extends ConsumerStatefulWidget {
-  const _LogoutButton({required this.onDone});
-
-  final VoidCallback onDone;
-
-  @override
-  ConsumerState<_LogoutButton> createState() => _LogoutButtonState();
-}
-
-class _LogoutButtonState extends ConsumerState<_LogoutButton> {
-  bool _busy = false;
-
-  Future<void> _logout() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    // 顺序由 LogoutService 保证（断 VPN → 清 token → 清用户缓存 → 清订阅缓存）。
-    await ref.read(logoutServiceProvider).run();
-    if (!mounted) return;
-    setState(() => _busy = false);
-    // token 清空后路由守卫也会跳，但显式 go 一次避免依赖 provider 重建时序。
-    widget.onDone();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: Sp.minTouch,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: cs.error,
-          foregroundColor: cs.onError,
+/// 右上角退出登录：二次确认 → 断 VPN 清 token → 跳登录。
+Future<void> _confirmAndLogout(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('退出登录'),
+      content: const Text('退出后将断开 VPN 连接，需要重新登录才能继续使用。'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('取消'),
         ),
-        onPressed: _busy ? null : () => _confirmLogout(context),
-        child: _busy
-            ? SizedBox(
-                width: Sp.base,
-                height: Sp.base,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: cs.onError,
-                ),
-              )
-            : const Text('退出登录'),
-      ),
-    );
-  }
-
-  Future<void> _confirmLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('退出登录'),
-        content: const Text('退出后将断开 VPN 连接，需要重新登录才能继续使用。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            foregroundColor: Theme.of(dialogContext).colorScheme.onError,
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('退出'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await _logout();
-  }
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('退出'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  // 顺序由 LogoutService 保证（断 VPN → 清 token → 清用户缓存 → 清订阅缓存）。
+  await ref.read(logoutServiceProvider).run();
+  // token 清空后路由守卫也会跳，但显式 go 一次避免依赖 provider 重建时序。
+  if (context.mounted) context.go(SettingsRoutes.login);
 }

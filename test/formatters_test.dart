@@ -13,20 +13,20 @@ void main() {
       expect(formatBytes(512), '512 B');
     });
 
-    test('KB / MB 1024 进制保留 1 位小数', () {
-      expect(formatBytes(1024), '1.0 KB');
-      expect(formatBytes(1536), '1.5 KB');
-      expect(formatBytes(1024 * 1024), '1.0 MB');
+    test('KB / MB 1024 进制保留 2 位小数', () {
+      expect(formatBytes(1024), '1.00 KB');
+      expect(formatBytes(1536), '1.50 KB');
+      expect(formatBytes(1024 * 1024), '1.00 MB');
     });
 
-    test('GB：1234567890 → 1.1 GB', () {
-      expect(formatBytes(1234567890), '1.1 GB');
+    test('GB：1234567890 → 1.15 GB', () {
+      expect(formatBytes(1234567890), '1.15 GB');
     });
 
     test('超大值封顶 PB 不越界', () {
       // 1024 PB 会溢出单位表，应停留在 PB。
       final pb = 1024 * 1024 * 1024 * 1024 * 1024;
-      expect(formatBytes(pb * 8), '8.0 PB');
+      expect(formatBytes(pb * 8), '8.00 PB');
     });
   });
 

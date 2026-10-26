@@ -126,8 +126,8 @@ void main() {
       );
 
       expect(find.text('本月已用'), findsOneWidget);
-      expect(find.text('3.0 GB / 10.0 GB'), findsOneWidget); // 已用 / 上限 行
-      expect(find.text('7.0 GB'), findsOneWidget); // 剩余
+      expect(find.text('3.00 GB / 10.00 GB'), findsOneWidget); // 已用 / 上限 行
+      expect(find.text('7.000 GB'), findsOneWidget); // 剩余
       expect(find.text('到期时间'), findsOneWidget);
       expect(find.text('距重置'), findsOneWidget);
       expect(find.text('30 天'), findsOneWidget);
@@ -159,7 +159,7 @@ void main() {
 
     testWidgets('数字变化走 400ms 过渡（不是直接换字）', (tester) async {
       await _pump(tester, _profile(used: 1 * _gb, limit: 10 * _gb));
-      expect(find.text('9.0 GB'), findsOneWidget);
+      expect(find.text('9.000 GB'), findsOneWidget);
 
       // 同一棵树里换数据：过渡期间新旧两个数字同时存在。
       await tester.pumpWidget(
@@ -176,12 +176,12 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('9.0 GB'), findsOneWidget);
-      expect(find.text('8.0 GB'), findsOneWidget);
+      expect(find.text('9.000 GB'), findsOneWidget);
+      expect(find.text('8.000 GB'), findsOneWidget);
 
       await tester.pumpAndSettle();
-      expect(find.text('9.0 GB'), findsNothing);
-      expect(find.text('8.0 GB'), findsOneWidget);
+      expect(find.text('9.000 GB'), findsNothing);
+      expect(find.text('8.000 GB'), findsOneWidget);
     });
   });
 }

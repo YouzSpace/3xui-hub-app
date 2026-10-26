@@ -136,8 +136,15 @@ void main() {
       expect(await _reporter(api).report(), isNull);
     });
 
-    test('⑨ 需升级但没给 download_url → 按静默处理', () async {
+    test('⑨ 可选更新没给 download_url → 仍返回决策（弹窗时再提示）', () async {
       final api = _StubVersionApi(() async => _data(url: ''));
+      final d = await _reporter(api).report();
+      expect(d, isNotNull);
+      expect(d!.isOptional, isTrue);
+    });
+
+    test('⑩ 强制更新没给 download_url → 静默（避免锁死用户）', () async {
+      final api = _StubVersionApi(() async => _data(url: '', force: '1'));
       expect(await _reporter(api).report(), isNull);
     });
 

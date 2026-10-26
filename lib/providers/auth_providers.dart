@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/api_exception.dart';
+import '../core/storage/prefs.dart';
 import '../core/storage/token_store.dart';
 import '../data/models/user_profile.dart';
 import '../data/repositories/auth_repository.dart';
@@ -68,8 +72,25 @@ class UserNotifier extends AsyncNotifier<UserProfile?> {
   Future<UserProfile?> build() async {
     final token = ref.watch(tokenProvider);
     if (token == null || token.isEmpty) return null;
+
+    // 先读本地缓存立即渲染（避免每次启动都等 /api/me）。
+    final cached = await Prefs.getCacheMe();
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final map = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        final profile = UserProfile.fromJson(map);
+        // 后台静默刷新，拿到新数据再更新 state。
+        unawaited(_refreshAndCache());
+        return profile;
+      } catch (_) {
+        // 缓存损坏，走网络。
+      }
+    }
+
     try {
-      return await ref.read(authRepositoryProvider).fetchMe();
+      final fresh = await ref.read(authRepositoryProvider).fetchMe();
+      await _cache(fresh);
+      return fresh;
     } on ApiException catch (e) {
       if (e.code == 401) {
         // token 失效：打标 + 清掉，路由守卫随后跳 /login。
@@ -78,6 +99,32 @@ class UserNotifier extends AsyncNotifier<UserProfile?> {
         return null;
       }
       rethrow;
+    }
+  }
+
+  /// 后台静默刷新 /api/me 并更新 state；失败保留缓存（不打扰用户）。
+  Future<void> _refreshAndCache() async {
+    try {
+      final fresh = await ref.read(authRepositoryProvider).fetchMe();
+      await _cache(fresh);
+      state = AsyncData(fresh);
+    } on ApiException catch (e) {
+      if (e.code == 401) {
+        ref.read(sessionExpiredProvider.notifier).state = true;
+        await ref.read(tokenProvider.notifier).clear();
+        state = const AsyncData(null);
+      }
+      // 其他错误静默：保留缓存。
+    } catch (_) {
+      // 网络异常静默：保留缓存。
+    }
+  }
+
+  Future<void> _cache(UserProfile profile) async {
+    try {
+      await Prefs.setCacheMe(jsonEncode(profile.toJson()));
+    } catch (_) {
+      // 写缓存失败不影响本次展示。
     }
   }
 

@@ -15,8 +15,10 @@ import '../../vpn/vpn_controller.dart';
 final subscriptionRepositoryProvider =
     Provider<SubscriptionRepository>((ref) => SubscriptionRepository());
 
-/// 测速并发上限（T3.4：限 3 并发）。
-const int kMeasureConcurrency = 3;
+/// 测速并发上限（节点延时测试并发数）。
+/// 16 会让手机同时拉起 16 个独立 xray 进程（每个 ~60MB 内核），
+/// 资源竞争下 xhttp 节点（握手更复杂）容易超时；降到 6 在速度与稳定间平衡。
+const int kMeasureConcurrency = 6;
 
 /// 自动选择最快节点的 prefs 键。
 ///
@@ -84,16 +86,15 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
   Future<void> select(Node node) =>
       ref.read(selectedNodeProvider.notifier).select(node);
 
-  /// 全量测速（3 并发）。已知节点全部重测，失败/超时的节点延迟置为 null。
+  /// 全量测速。已知节点全部重测，失败/超时的节点延迟置为 null。
   Future<void> measureAll() async {
     final nodes = state.valueOrNull;
     if (nodes == null || nodes.isEmpty) return;
-    final measured = await _measure(nodes);
-    state = AsyncData(measured);
+    await _measure(nodes);
 
     // 自动选择开启时，测完立刻切到最快的那个。
     if (ref.read(autoSelectFastestProvider)) {
-      final fastest = _fastest(measured);
+      final fastest = _fastest(state.valueOrNull ?? const []);
       if (fastest != null) {
         await ref.read(selectedNodeProvider.notifier).select(fastest);
       }
@@ -104,8 +105,7 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
   Future<void> measureOne(Node node) async {
     final nodes = state.valueOrNull;
     if (nodes == null || nodes.isEmpty) return;
-    final measured = await _measure(nodes, only: node);
-    state = AsyncData(measured);
+    await _measure(nodes, only: node);
   }
 
   /// 开关「自动选择最快节点」：打开时立即测速并切到最快节点。
@@ -115,11 +115,13 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
   }
 
   /// 并发上限为 [kMeasureConcurrency] 的测速；`only` 非空时只测该节点。
-  Future<List<Node>> _measure(List<Node> nodes, {Node? only}) async {
+  ///
+  /// 每测完一个节点就实时把延迟写进 state（测一个显示一个），
+  /// 而不是全测完才一次性蹦出来。
+  Future<void> _measure(List<Node> nodes, {Node? only}) async {
     final targets = only == null ? nodes : [only];
-    if (targets.isEmpty) return nodes;
+    if (targets.isEmpty) return;
 
-    final latency = <String, int?>{};
     var cursor = 0;
     final measuring = ref.read(measuringNodesProvider.notifier);
 
@@ -129,14 +131,15 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
         if (index >= targets.length) return;
         final node = targets[index];
         measuring.mark(node.raw);
+        int? ms;
         try {
-          latency[node.raw] =
-              await ref.read(vpnEngineProvider).measureDelay(node.raw);
+          ms = await ref.read(vpnEngineProvider).measureDelay(node.raw);
         } catch (_) {
-          latency[node.raw] = null;
+          ms = null;
         } finally {
           measuring.unmark(node.raw);
         }
+        _applyLatency(node.raw, ms);
       }
     }
 
@@ -144,11 +147,15 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
       for (var i = 0; i < math.min(kMeasureConcurrency, targets.length); i++)
         worker(),
     ]);
+  }
 
-    return [
-      for (final n in nodes)
-        latency.containsKey(n.raw) ? n.withLatency(latency[n.raw]) : n,
-    ];
+  /// 把单个节点的测速结果实时写回 state（测一个刷新一次列表）。
+  void _applyLatency(String raw, int? ms) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData([
+      for (final n in current) n.raw == raw ? n.withLatency(ms) : n,
+    ]);
   }
 
   static Node? _fastest(List<Node> nodes) {

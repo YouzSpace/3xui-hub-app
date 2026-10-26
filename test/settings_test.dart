@@ -198,8 +198,8 @@ void main() {
   });
 
   group('页面冒烟', () {
-    testWidgets('设置页渲染出三分组与退出登录按钮', (tester) async {
-      // 竖屏高一点，避免 ListView 下半部分（退出登录）落在视口外不构建。
+    testWidgets('设置页渲染出三分组与右上角退出图标', (tester) async {
+      // 竖屏高一点，避免 ListView 下半部分落在视口外不构建。
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -226,7 +226,7 @@ void main() {
       expect(find.text('v1.0.0 (1)'), findsOneWidget);
       expect(find.text('套餐'), findsOneWidget);
       expect(find.text('意见反馈'), findsOneWidget);
-      expect(find.text('退出登录'), findsOneWidget);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
     });
 
     testWidgets('连点版本号 5 次弹出隐藏地址入口', (tester) async {

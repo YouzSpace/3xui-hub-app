@@ -31,6 +31,7 @@ class NodesPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('节点'),
+        actionsPadding: const EdgeInsets.only(right: Sp.sm),
         actions: [
           if (nodes is AsyncData<List<Node>> && nodes.value.isNotEmpty)
             _AutoSelectSwitch(
@@ -46,30 +47,24 @@ class NodesPage extends ConsumerWidget {
         ],
       ),
       // 右下角闪电悬浮按钮：一键测全部节点真延迟（参考图样式：圆角矩形无文字）。
-      floatingActionButton: nodes.valueOrNull?.isNotEmpty == true
-          ? Padding(
-              padding: EdgeInsets.only(bottom: appBottomBarHeight),
-              child: FloatingActionButton(
-                tooltip: '一键测速',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Sp.base),
-                ),
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                onPressed: () => ref.read(nodesProvider.notifier).measureAll(),
-                child: measuring.isNotEmpty
-                    ? SizedBox(
-                        width: Sp.xl,
-                        height: Sp.xl,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: cs.onPrimary,
-                        ),
-                      )
-                    : const Icon(Icons.bolt),
-              ),
-            )
-          : null,
+      // 测速中隐藏一键测速按钮（像 fclash），测速完成再恢复，避免按钮转圈占位。
+      floatingActionButton:
+          nodes.valueOrNull?.isNotEmpty == true && measuring.isEmpty
+              ? Padding(
+                  padding: EdgeInsets.only(bottom: appBottomBarHeight),
+                  child: FloatingActionButton(
+                    tooltip: '一键测速',
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(Sp.base),
+                    ),
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
+                    onPressed: () =>
+                        ref.read(nodesProvider.notifier).measureAll(),
+                    child: const Icon(Icons.bolt),
+                  ),
+                )
+              : null,
       body: nodes.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(Sp.base),

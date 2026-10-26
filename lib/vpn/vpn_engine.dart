@@ -46,6 +46,12 @@ abstract class VpnEngine {
 
   /// 单节点测速（毫秒）；超时/失败/链接非法返回 null。
   Future<int?> measureDelay(String shareLink);
+
+  /// 测当前已连接隧道的延迟（毫秒）；未连接/失败返回 null。
+  ///
+  /// 与 [measureDelay]（独立起一个 xray 进程测任意节点）不同，
+  /// 这个方法复用正在跑的 VPN 进程，不启动新进程、不与连接冲突。
+  Future<int?> measureConnectedDelay();
 }
 
 /// flutter_vless 1.1.6 的真实适配实现（API 依据包内 doc/api.md）。
@@ -155,12 +161,27 @@ class FlutterVlessEngine implements VpnEngine {
   Future<int?> measureDelay(String shareLink) async {
     try {
       final parsed = FlutterVless.parse(shareLink);
-      // 插件测速失败时返回平台自定义失败值或抛异常，统一收口为 null。
-      final delay = await _vless.getServerDelay(
-        config: parsed.getFullConfiguration(),
-        url: _delayProbeUrl,
-      );
+      // 测速加超时：引擎/节点卡住时不能拖死测速 worker（否则转圈永不结束）。
+      final delay = await _vless
+          .getServerDelay(
+            config: parsed.getFullConfiguration(),
+            url: _delayProbeUrl,
+          )
+          .timeout(const Duration(seconds: 15));
       return delay;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<int?> measureConnectedDelay() async {
+    try {
+      final delay = await _vless
+          .getConnectedServerDelay(url: _delayProbeUrl)
+          .timeout(const Duration(seconds: 15));
+      // 原生返回负值（如 -1）表示探测失败。
+      return delay < 0 ? null : delay;
     } catch (_) {
       return null;
     }

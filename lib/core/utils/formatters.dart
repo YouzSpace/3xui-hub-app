@@ -3,8 +3,8 @@
 /// 全部纯函数，可单测。数字统一用等宽样式在 UI 层处理（tabularFigures）。
 library;
 
-/// 流量：1024 进制，保留 1 位小数。`1234567890` → `1.1 GB`。
-String formatBytes(int bytes) {
+/// 流量：1024 进制，保留 [fractionDigits] 位小数（默认 2）。`1234567890` → `1.15 GB`。
+String formatBytes(int bytes, {int fractionDigits = 2}) {
   if (bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   var value = bytes.toDouble();
@@ -14,7 +14,7 @@ String formatBytes(int bytes) {
     i++;
   }
   if (i == 0) return '$bytes B';
-  return '${value.toStringAsFixed(1)} ${units[i]}';
+  return '${value.toStringAsFixed(fractionDigits)} ${units[i]}';
 }
 
 /// 金额：`¥19.90`（两位小数）。

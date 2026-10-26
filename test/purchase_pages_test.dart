@@ -49,7 +49,7 @@ void main() {
     expect(find.text('月付'), findsNWidgets(2));
     expect(find.text('¥19.90'), findsOneWidget);
     expect(find.text('/月'), findsOneWidget);
-    expect(find.text('100.0 GB'), findsOneWidget);
+    expect(find.text('100.00 GB'), findsOneWidget);
     expect(find.text('立即购买'), findsOneWidget);
   });
 
@@ -61,7 +61,7 @@ void main() {
       ),
     )));
     expect(find.text('流量随用随充'), findsOneWidget);
-    expect(find.text('100.0 GB'), findsNothing);
+    expect(find.text('100.00 GB'), findsNothing);
   });
 
   testWidgets('PlansPage 空态', (tester) async {

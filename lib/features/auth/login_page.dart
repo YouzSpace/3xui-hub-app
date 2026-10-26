@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,9 +44,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_expiredShown) return;
     if (!ref.read(sessionExpiredProvider)) return;
     _expiredShown = true;
-    ref.read(sessionExpiredProvider.notifier).state = false;
+    // 状态重置必须放到 build 之后：build 期间同步改 provider 会触发
+    // Riverpod「modify provider while building」异常（切站点后 token 失效 401 即踩中）。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(sessionExpiredProvider.notifier).state = false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('登录已过期，请重新登录')),
       );
@@ -129,18 +132,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Center(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        siteLogo,
+                      child: CachedNetworkImage(
+                        imageUrl: siteLogo,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
+                        errorWidget: (_, _, _) =>
                             Icon(Icons.shield, size: 64, color: cs.primary),
                       ),
                     ),
                   ),
                 const SizedBox(height: Sp.base),
-                Text(siteTitle.isEmpty ? 'ControlHub' : siteTitle,
+                Text(siteTitle,
                     textAlign: TextAlign.center,
                     style: text.headlineMedium),
                 const SizedBox(height: Sp.sm),

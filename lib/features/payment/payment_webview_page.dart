@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/theme/spacing.dart';
@@ -183,13 +184,36 @@ class _PaymentWebviewPageState extends ConsumerState<PaymentWebviewPage> {
         _mainFrameUrls.add(request.url);
         return NavigationDecision.navigate;
       case NavigationVerdict.returnToApp:
-        // 支付平台已把用户引导回 App：不加载该 scheme，直接进入到账确认。
-        _finish();
+        // 支付平台要调起外部支付 App（支付宝/微信等）：launchUrl 调起，
+        // 成功后进入轮询，等用户完成支付回来确认到账。
+        _launchPaymentApp(request.url);
         return NavigationDecision.prevent;
       case NavigationVerdict.block:
         // 别的域名（广告、客服、跳 App 商店…）：不加载、也不外跳。
         return NavigationDecision.prevent;
     }
+  }
+
+  /// 调起外部支付 App（支付宝/微信等）；调起成功后进入轮询，失败则提示用户。
+  Future<void> _launchPaymentApp(String url) async {
+    final uri = Uri.parse(url);
+    bool launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // 平台通道异常 / 没装对应 App，都按调起失败处理。
+      launched = false;
+    }
+    if (!mounted) return;
+    if (!launched) {
+      // 调起失败：保持 WebView，提示用户换其他支付方式。
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('未安装对应支付应用，请尝试其他支付方式')),
+      );
+      return;
+    }
+    // 调起成功：进入轮询，等用户完成支付回到本 App 后确认到账。
+    await _finish();
   }
 
   /// 关闭 WebView 并开始轮询；已是确认态则直接返回。
@@ -341,7 +365,9 @@ class _PaymentWebviewPageState extends ConsumerState<PaymentWebviewPage> {
       ),
     );
     if (leave == true && mounted) {
-      await _finish();
+      // 用户明确放弃支付：直接离开，不进入 60 秒轮询
+      // （否则「不想支付」点确定离开也会卡在「正在确认支付结果」页）。
+      _leave(PaymentOutcome.aborted);
     }
   }
 

@@ -63,6 +63,9 @@ class _FakeEngine implements VpnEngine {
 
   @override
   Future<int?> measureDelay(String shareLink) async => latency[shareLink];
+
+  @override
+  Future<int?> measureConnectedDelay() async => null;
 }
 
 Node _node(String name, {String? host}) {
@@ -225,7 +228,7 @@ void main() {
       expect(container.read(nodesProvider).value!.single.latencyMs, isNull);
     });
 
-    test('并发上限 3：5 个节点同时最多 3 个在测', () async {
+    test('并发上限 16：5 个节点全部并发', () async {
       repo.nodes = [for (var i = 0; i < 5; i++) _node('N$i')];
 
       var inFlight = 0;
@@ -249,7 +252,7 @@ void main() {
       await container.read(nodesProvider.notifier).measureAll();
 
       expect(peak, lessThanOrEqualTo(kMeasureConcurrency));
-      expect(peak, kMeasureConcurrency, reason: '5 个节点应该跑满 3 并发');
+      expect(peak, 5, reason: '5 个节点在上限 16 内应全部并发');
       expect(
         container.read(nodesProvider).value!.every((n) => n.latencyMs == 100),
         isTrue,
@@ -345,4 +348,7 @@ class _ProbeEngine implements VpnEngine {
 
   @override
   Future<int?> measureDelay(String shareLink) => _measure(shareLink);
+
+  @override
+  Future<int?> measureConnectedDelay() async => null;
 }

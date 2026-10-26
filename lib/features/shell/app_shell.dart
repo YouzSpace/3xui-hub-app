@@ -3,15 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/spacing.dart';
-import '../../core/ui/glass_surface.dart';
 import '../../core/ui/motion.dart';
 import '../../providers/auth_providers.dart';
 
 /// 主壳（T1.10）：底部导航，StatefulShellRoute.indexedStack
 /// 保留各 tab 状态（切回来不重建、不丢滚动位置）。
 ///
-/// 底栏用 GlassSurface（玻璃白名单唯一常驻位置），
-/// 选中态 secondaryContainer 胶囊。
+/// 底栏用实心圆角容器（非玻璃材质），选中态 secondaryContainer 胶囊。
 ///
 /// branch 顺序固定：0=home、1=nodes、2=settings；
 /// 无套餐（planId==0）时不显示「节点」tab，只留首页 / 我的。
@@ -49,6 +47,7 @@ class AppShell extends ConsumerWidget {
     final user = ref.watch(userProvider).valueOrNull;
     final hasPlan = user != null && user.planId > 0;
     final tabs = _tabs(hasPlan);
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: shell,
@@ -58,8 +57,18 @@ class AppShell extends ConsumerWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Sp.sm, vertical: Sp.sm),
-          child: GlassSurface(
-            radius: BorderRadius.circular(Sp.xl),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainer,
+              borderRadius: BorderRadius.circular(Sp.xl),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
             child: SizedBox(
               height: _bottomBarInnerHeight,
               child: Row(

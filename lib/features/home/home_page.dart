@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -121,9 +122,10 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final title = siteTitle.isEmpty ? 'ControlHub' : siteTitle;
+    final title = siteTitle;
     return AppBar(
       titleSpacing: Sp.base,
+      actionsPadding: const EdgeInsets.only(right: Sp.sm),
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -138,12 +140,12 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: siteLogo.trim().isEmpty
                 ? Icon(Icons.shield_moon_outlined,
                     size: 20, color: cs.onPrimaryContainer)
-                : Image.network(
-                    siteLogo,
+                : CachedNetworkImage(
+                    imageUrl: siteLogo,
                     width: 32,
                     height: 32,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Icon(Icons.shield_moon_outlined,
+                    errorWidget: (_, _, _) => Icon(Icons.shield_moon_outlined,
                         size: 20, color: cs.onPrimaryContainer),
                   ),
           ),

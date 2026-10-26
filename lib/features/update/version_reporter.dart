@@ -182,8 +182,9 @@ class VersionReporter {
     await _markChecked(now);
 
     if (decision == null || decision.isNone) return null;
-    // 后台配了需升级却没给下载地址：弹了也装不了，按静默处理。
-    if (decision.downloadUrl == null) return null;
+    // 强制更新但没给下载地址：弹了会把用户锁死在不可关闭的弹窗里，静默跳过；
+    // 可选更新照常返回，弹窗点「立即更新」时再提示未提供下载地址。
+    if (decision.isForce && decision.downloadUrl == null) return null;
     return decision;
   }
 

@@ -40,6 +40,14 @@ class SiteContent {
       siteLogo: _toStr(json['site_logo']).trim(),
     );
   }
+
+  /// 序列化（用于本地缓存 site-config，启动时先读缓存避免闪变）。
+  Map<String, dynamic> toJson() => {
+        'site_title': siteTitle,
+        'announcement': announcement,
+        'feedback_link': feedbackLink,
+        'site_logo': siteLogo,
+      };
 }
 
 String _toStr(dynamic v) => v is String ? v : (v == null ? '' : '$v');

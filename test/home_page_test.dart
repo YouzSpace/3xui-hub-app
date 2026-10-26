@@ -84,6 +84,9 @@ class _FakeEngine implements VpnEngine {
   @override
   Future<int?> measureDelay(String shareLink) async => 88;
 
+  @override
+  Future<int?> measureConnectedDelay() async => null;
+
   void emit(VpnStatus s) => _status.add(s);
 }
 
@@ -280,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(userNotifier.builds, 2, reason: '下拉要重拉 /api/me');
-      expect(find.text('5.0 GB / 10.0 GB'), findsOneWidget);
+      expect(find.text('5.00 GB / 10.00 GB'), findsOneWidget);
       expect(
         subRepo.fetchCalls,
         2,

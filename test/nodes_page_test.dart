@@ -67,6 +67,9 @@ class _FakeEngine implements VpnEngine {
   @override
   Future<int?> measureDelay(String shareLink) async => 88;
 
+  @override
+  Future<int?> measureConnectedDelay() async => null;
+
   void emit(VpnStatus s) => _status.add(s);
 }
 

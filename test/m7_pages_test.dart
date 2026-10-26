@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:controlhub_app/data/models/site_content.dart';
 import 'package:controlhub_app/data/models/tutorial.dart';
+import 'package:controlhub_app/data/repositories/content_repository.dart';
 import 'package:controlhub_app/features/announcements/announcements_page.dart';
 import 'package:controlhub_app/features/announcements/notice_detail_dialog.dart';
 import 'package:controlhub_app/features/announcements/site_content_providers.dart';
@@ -83,7 +84,7 @@ void main() {
       await tester.pumpWidget(_host(
         const AnnouncementsPage(),
         overrides: [
-          siteContentProvider.overrideWith((ref) async => _site),
+          siteContentProvider.overrideWith((ref) => _FakeSiteContent(_site)),
         ],
       ));
       await tester.pumpAndSettle();
@@ -97,11 +98,11 @@ void main() {
         const AnnouncementsPage(),
         overrides: [
           siteContentProvider.overrideWith(
-            (ref) async => const SiteContent(
+            (ref) => _FakeSiteContent(const SiteContent(
               siteTitle: 'x',
               announcement: '   ',
               feedbackLink: '',
-            ),
+            )),
           ),
         ],
       ));
@@ -155,4 +156,11 @@ class _FakeTutorials extends TutorialListNotifier {
 
   @override
   Future<List<Tutorial>> build() async => value;
+}
+
+class _FakeSiteContent extends SiteContentNotifier {
+  _FakeSiteContent(SiteContent value)
+      : super(ContentRepository(), autoLoad: false) {
+    state = AsyncValue.data(value);
+  }
 }

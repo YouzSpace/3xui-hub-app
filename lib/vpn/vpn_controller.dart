@@ -143,11 +143,21 @@ class VpnController extends Notifier<VpnState> {
     state = VpnState(status: VpnStatus.idle, latencyMs: state.latencyMs);
   }
 
+  /// 已连接时断开并用当前节点重连（绕开国内等连接配置变更后让新配置生效）。
+  Future<void> reconnectActive() async {
+    final node = state.activeNode;
+    if (state.status != VpnStatus.connected || node == null) return;
+    await disconnect();
+    await connect(node);
+  }
+
   /// 连接后测速并写入状态（M3/M5 调用）。
   Future<void> measureActiveLatency() async {
     final node = state.activeNode;
     if (node == null) return;
-    final delay = await _engine.measureDelay(node.raw);
+    // 已连接时复用当前 VPN 进程测延迟（getServerDelay 会另起 xray 进程，
+    // 与正在跑的 VPN 冲突，导致「连接中刷不出延迟」）。
+    final delay = await _engine.measureConnectedDelay();
     if (delay != null) {
       state = state.copyWith(latencyMs: delay);
       node.latencyMs = delay;
@@ -163,7 +173,9 @@ class VpnController extends Notifier<VpnState> {
   }
 
   void _startTicker() {
-    _stopTicker();
+    // 引擎在 connected 状态下会周期性重复回调，若每次都重置计时器，
+    // 时长会一直 00:01 来回跳。已在计时则直接忽略，只保留首次启动。
+    if (_ticker != null) return;
     state = state.copyWith(connectedFor: Duration.zero);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => tick());
   }

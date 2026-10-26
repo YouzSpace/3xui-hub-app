@@ -52,6 +52,9 @@ class _MockEngine implements VpnEngine {
 
   @override
   Future<int?> measureDelay(String shareLink) async => 42;
+
+  @override
+  Future<int?> measureConnectedDelay() async => 42;
 }
 
 /// 区分「没传」与「显式传 null」的哨兵（3b 用例要显式传 null 过期时间）。

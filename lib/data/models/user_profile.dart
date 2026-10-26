@@ -75,6 +75,28 @@ class UserProfile {
     );
   }
 
+  /// 序列化（用于本地缓存 /api/me，启动时先读缓存避免每次都联网拉）。
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'token': token,
+        'protocol': protocol,
+        'plan_id': planId,
+        'plan_type': planType,
+        'plan_name': planName,
+        'plan_include_local': planIncludeLocal,
+        'plan_months': planMonths,
+        'plan_price': planPrice,
+        'plan_reset_price': planResetPrice,
+        'traffic_limit': trafficLimit,
+        'traffic_used': trafficUsed,
+        'monthly_traffic_used': monthlyTrafficUsed,
+        'monthly_traffic_limit': monthlyTrafficLimit,
+        'next_traffic_reset_at': nextTrafficResetAt?.toIso8601String(),
+        'expired_at': expiredAt?.toIso8601String(),
+        'enabled': enabled,
+      };
+
   static int _toInt(dynamic v) {
     if (v is num) return v.toInt();
     if (v is String) {

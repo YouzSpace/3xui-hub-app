@@ -111,7 +111,8 @@ class _Normal extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('本月已用', style: text.titleMedium),
+            Text(summary.isTotal ? '已用流量' : '本月已用',
+                style: text.titleMedium),
             const Spacer(),
             if (summary.isUnlimited)
               Text('∞',
@@ -126,7 +127,7 @@ class _Normal extends StatelessWidget {
                 children: [
                   Text('剩余 ', style: text.bodySmall),
                   RollingNumber(
-                    text: formatBytes(summary.remaining),
+                    text: formatBytes(summary.remaining, fractionDigits: 3),
                     style: text.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -173,17 +174,21 @@ class _Normal extends StatelessWidget {
             Expanded(
               child: KeyValue(
                 label: '到期时间',
-                value: formatDate(summary.expiredAt),
+                value: summary.isTotal
+                    ? '长期有效'
+                    : formatDate(summary.expiredAt),
               ),
             ),
-            Expanded(
-              child: KeyValue(
-                label: '距重置',
-                value: summary.resetAt == null
-                    ? '—'
-                    : '${daysLeft(summary.resetAt)} 天',
+            // total（一次性流量）套餐没有月度重置概念，不显示「距重置」。
+            if (!summary.isTotal)
+              Expanded(
+                child: KeyValue(
+                  label: '距重置',
+                  value: summary.resetAt == null
+                      ? '—'
+                      : '${daysLeft(summary.resetAt)} 天',
+                ),
               ),
-            ),
           ],
         ),
       ],

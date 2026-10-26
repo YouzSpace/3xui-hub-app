@@ -61,14 +61,18 @@ class Node {
     if (config.isEmpty) return null;
 
     try {
-      switch (scheme) {
-        case 'vmess':
-          return _fromVmess(line, config, name);
-        case 'ss':
-          return _fromShadowsocks(line, config, name);
-        default:
-          return _fromStandard(scheme, line, config, name);
+      final Node? node = switch (scheme) {
+        'vmess' => _fromVmess(line, config, name),
+        'ss' => _fromShadowsocks(line, config, name),
+        _ => _fromStandard(scheme, line, config, name),
+      };
+      // 流量信息节点：后端为周期套餐注入的 `ss://aes-256-gcm:info@127.0.0.1:1`
+      // （展示「到期/重置」信息、不入代理组），不是真实节点 —— 过滤掉，
+      // 避免它进节点列表、被当成可连节点测速（连 127.0.0.1:1 必然失败）。
+      if (node != null && node.host == '127.0.0.1' && node.port == 1) {
+        return null;
       }
+      return node;
     } catch (_) {
       // 任何畸形链接都只返回 null，由调用方记 errors。
       return null;

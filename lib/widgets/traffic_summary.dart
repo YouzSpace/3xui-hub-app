@@ -17,19 +17,23 @@ class TrafficSummary {
     required this.limit,
     required this.expiredAt,
     required this.resetAt,
+    required this.isTotal,
   });
 
   final TrafficPlanState state;
   final String planName;
 
-  /// 本月已用字节数。
+  /// 已用字节数（total 套餐 = 累计已用；period 套餐 = 本月已用）。
   final int used;
 
-  /// 本月流量上限；0 表示不限量。
+  /// 流量上限；0 表示不限量。
   final int limit;
 
   final DateTime? expiredAt;
   final DateTime? resetAt;
+
+  /// total（一次性流量）套餐：流量走 traffic_used/traffic_limit，无到期/月度重置概念。
+  final bool isTotal;
 
   factory TrafficSummary.fromProfile(UserProfile profile) {
     final TrafficPlanState state;
@@ -40,13 +44,15 @@ class TrafficSummary {
     } else {
       state = TrafficPlanState.normal;
     }
+    final isTotal = profile.planType == 'total';
     return TrafficSummary(
       state: state,
       planName: profile.planName,
-      used: profile.monthlyTrafficUsed,
-      limit: profile.monthlyTrafficLimit,
+      used: isTotal ? profile.trafficUsed : profile.monthlyTrafficUsed,
+      limit: isTotal ? profile.trafficLimit : profile.monthlyTrafficLimit,
       expiredAt: profile.expiredAt,
       resetAt: profile.nextTrafficResetAt,
+      isTotal: isTotal,
     );
   }
 

@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/storage/prefs.dart';
 import '../../data/models/site_content.dart';
 import '../../data/repositories/content_repository.dart';
 
@@ -12,6 +15,42 @@ final contentRepositoryProvider = Provider<ContentRepository>(
   (ref) => ContentRepository(),
 );
 
-final siteContentProvider = FutureProvider<SiteContent>((ref) async {
-  return ref.read(contentRepositoryProvider).fetchSiteContent();
-});
+/// 站点内容：启动先读本地缓存立即渲染（避免先显示空/占位再闪成网站名与 logo），
+/// 后台网络刷新成功后写回缓存。无缓存且网络失败才进入 error。
+final siteContentProvider =
+    StateNotifierProvider<SiteContentNotifier, AsyncValue<SiteContent>>(
+  (ref) => SiteContentNotifier(ref.read(contentRepositoryProvider)),
+);
+
+class SiteContentNotifier extends StateNotifier<AsyncValue<SiteContent>> {
+  SiteContentNotifier(this._repo, {bool autoLoad = true})
+      : super(const AsyncValue.loading()) {
+    if (autoLoad) _load();
+  }
+
+  final ContentRepository _repo;
+
+  Future<void> _load() async {
+    // 1. 先读本地缓存立即渲染。
+    final cached = await Prefs.getCacheSiteConfig();
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final map = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        state = AsyncValue.data(SiteContent.fromJson(map));
+      } catch (_) {
+        // 缓存损坏则忽略，走网络。
+      }
+    }
+    // 2. 网络刷新，成功后写缓存。
+    try {
+      final fresh = await _repo.fetchSiteContent();
+      state = AsyncValue.data(fresh);
+      await Prefs.setCacheSiteConfig(jsonEncode(fresh.toJson()));
+    } catch (e) {
+      // 已有缓存就继续用缓存，不打扰用户；无缓存才进入错误态。
+      if (!state.hasValue) {
+        state = AsyncValue.error(e, StackTrace.current);
+      }
+    }
+  }
+}
