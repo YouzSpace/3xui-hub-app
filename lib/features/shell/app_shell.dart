@@ -88,7 +88,9 @@ class _NavTab extends StatelessWidget {
         onTap: onTap,
         customBorder: const StadiumBorder(),
         child: SizedBox(
-          height: Sp.minTouch,
+          // 胶囊 32 + 间距 2 + labelSmall 文字 ≈ 50+，minTouch(48) 放不下会溢出
+          // （实测底部红色 OVERFLOW BOTTOM）；抬高到 60 给系统字体缩放留余量。
+          height: Sp.minTouch + Sp.md,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

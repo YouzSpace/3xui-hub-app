@@ -77,15 +77,17 @@ class GlassSurface extends StatelessWidget {
       ],
     );
 
-    final clipped = ClipRRect(borderRadius: radius, child: body);
-
     // ③ 模糊层：低端机降级为纯色，避免掉帧。
-    if (isLowEndDevice) return RepaintBoundary(child: clipped);
+    // BackdropFilter 必须包在 ClipRRect 里面（不是外面），否则模糊不受裁剪、
+    // 泄漏到整个屏幕——实测真机/模拟器：底部导航玻璃把全屏糊成「蒙了层雾」。
+    final glass = isLowEndDevice
+        ? body
+        : BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+            child: body,
+          );
     return RepaintBoundary(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: clipped,
-      ),
+      child: ClipRRect(borderRadius: radius, child: glass),
     );
   }
 }

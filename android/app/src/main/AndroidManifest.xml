@@ -10,6 +10,11 @@
         android:label="ControlHub"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- 禁用 Impeller(Vulkan)，改用 Skia 渲染：雷电模拟器等 GPU 对 Vulkan 支持差，
+             会导致页面渲染模糊/花屏（实测 logcat 报 EGL_BAD_MATCH）。真机无此问题。 -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

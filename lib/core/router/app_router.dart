@@ -49,7 +49,7 @@ final GoRouter appRouter = GoRouter(
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
-        StatefulShellBranch(routes: [_fadeRoute('/', const HomePage())]),
+        StatefulShellBranch(routes: [_fadeRoute('/home', const HomePage())]),
         StatefulShellBranch(routes: [_fadeRoute(NodesRoutes.nodes, const NodesPage())]),
         StatefulShellBranch(routes: [_fadeRoute(PlansRoutes.plans, const PlansPage())]),
         StatefulShellBranch(routes: [_fadeRoute('/invite', const InvitePage())]),
