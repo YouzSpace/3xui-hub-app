@@ -57,6 +57,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -99,3 +101,17 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# 图标与启动页生成配置（T1.11，占位图标，客户换品牌时替换 assets/branding/ 下两个图）。
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/branding/icon.png"
+  adaptive_icon_background: "#6750A4"
+  adaptive_icon_foreground: "assets/branding/icon.png"
+
+flutter_native_splash:
+  color: "#6750A4"
+  image: assets/branding/splash.png
+  android: true
+  ios: false
