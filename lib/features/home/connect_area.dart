@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/theme/spacing.dart';
 import '../../core/utils/formatters.dart';
@@ -22,20 +23,36 @@ class ConnectArea extends ConsumerWidget {
     final blockedReason = ref.watch(planBlockReasonProvider);
     final selected = ref.watch(selectedNodeProvider);
     final text = Theme.of(context).textTheme;
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final cs = Theme.of(context).colorScheme;
+    final muted = cs.onSurfaceVariant;
 
     final meta = _metaLine(vpn);
 
     return Column(
       children: [
         const SizedBox(height: Sp.lg),
-        ConnectButton(
-          status: vpn.status,
-          blockedReason: blockedReason,
-          blockedIcon: profile.planId == 0
-              ? Icons.shopping_bag_outlined
-              : Icons.power_settings_new,
-          onPressed: () => _onTap(context, ref, blockedReason),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // 世界地图装饰背景（按钮后面，主题色淡染）。
+            SvgPicture.asset(
+              'assets/decor/world.svg',
+              width: 340,
+              height: 200,
+              colorFilter: ColorFilter.mode(
+                cs.primary.withValues(alpha: 0.10),
+                BlendMode.srcIn,
+              ),
+            ),
+            ConnectButton(
+              status: vpn.status,
+              blockedReason: blockedReason,
+              blockedIcon: profile.planId == 0
+                  ? Icons.shopping_bag_outlined
+                  : Icons.power_settings_new,
+              onPressed: () => _onTap(context, ref, blockedReason),
+            ),
+          ],
         ),
         const SizedBox(height: Sp.base),
         Text(_statusLine(vpn, blockedReason), style: text.titleMedium),
@@ -44,8 +61,10 @@ class ConnectArea extends ConsumerWidget {
           Text(meta, style: text.bodySmall?.copyWith(color: muted)),
         ] else if (selected != null && !vpn.isBusy) ...[
           const SizedBox(height: Sp.xs),
-          Text('当前节点 · ${selected.name}',
-              style: text.bodySmall?.copyWith(color: muted)),
+          Text(
+            '当前节点 · ${selected.name}',
+            style: text.bodySmall?.copyWith(color: muted),
+          ),
         ],
         const SizedBox(height: Sp.lg),
       ],
