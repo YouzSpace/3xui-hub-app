@@ -56,8 +56,7 @@ class NodesPage extends ConsumerWidget {
                 ),
                 backgroundColor: cs.primary,
                 foregroundColor: cs.onPrimary,
-                onPressed: () =>
-                    ref.read(nodesProvider.notifier).measureAll(),
+                onPressed: () => ref.read(nodesProvider.notifier).measureAll(),
                 child: measuring.isNotEmpty
                     ? SizedBox(
                         width: Sp.xl,
@@ -106,8 +105,8 @@ class NodesPage extends ConsumerWidget {
     final state = ref.read(nodesProvider);
     final message = state.hasError
         ? (state.error is ApiException
-            ? (state.error as ApiException).message
-            : '订阅获取失败，请稍后重试')
+              ? (state.error as ApiException).message
+              : '订阅获取失败，请稍后重试')
         : '已更新 ${state.valueOrNull?.length ?? 0} 个节点';
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -131,14 +130,14 @@ class _NodeList extends ConsumerWidget {
 
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(
+        Sp.base,
         Sp.sm,
-        Sp.sm,
-        Sp.sm,
+        Sp.base,
         // 底栏浮在内容上（AppShell extendBody），底部留出底栏视觉高度 + 系统安全区。
         appBottomBarHeight + MediaQuery.of(context).padding.bottom + Sp.base,
       ),
       itemCount: nodes.length,
-      separatorBuilder: (_, _) => const Divider(indent: Sp.base, endIndent: Sp.base),
+      separatorBuilder: (_, _) => const SizedBox(height: Sp.sm),
       itemBuilder: (context, i) {
         final node = nodes[i];
         return NodeTile(
@@ -247,14 +246,10 @@ class _AutoSelectSwitch extends StatelessWidget {
       children: [
         Text(
           '自动选择',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+          style: Theme.of(context).textTheme.labelMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-        ),
+        Switch(value: value, onChanged: onChanged),
       ],
     );
   }

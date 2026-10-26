@@ -68,18 +68,21 @@ final connectionToggleProvider = Provider<Future<void> Function()>((ref) {
 
 /// 连接目标节点：自动选择开启时用延迟最低（有测速结果），否则用选中节点。
 ///
-/// 测速还没出结果（或全部失败）时回退选中节点——反正连不上，用谁都是失败。
+/// 测速还没出结果（或全部失败）时用第一个节点而非「选中节点」——
+/// 自动选择模式下不该回退到手动选的那个，否则「打开自动选择」形同虚设。
 Node? _resolveConnectNode(Ref ref) {
-  final selected = ref.read(selectedNodeProvider);
-  if (!ref.read(autoSelectFastestProvider)) return selected;
+  if (!ref.read(autoSelectFastestProvider)) {
+    return ref.read(selectedNodeProvider);
+  }
   final nodes = ref.read(nodesProvider).valueOrNull ?? const <Node>[];
+  if (nodes.isEmpty) return ref.read(selectedNodeProvider);
   Node? fastest;
   for (final n in nodes) {
     final ms = n.latencyMs;
     if (ms == null) continue;
     if (fastest == null || ms < (fastest.latencyMs ?? 1 << 30)) fastest = n;
   }
-  return fastest ?? selected;
+  return fastest ?? nodes.first;
 }
 
 /// 下拉刷新（T5.5）：同时刷新 userProvider 与 nodesProvider，且不重复请求。
@@ -160,10 +163,7 @@ class HomeStatusSync {
   /// 上一次看到的用户协议（null = 还没有基线，首次下发不触发重拉）。
   String? _protocol;
 
-  void _onUser(
-    AsyncValue<UserProfile?>? _,
-    AsyncValue<UserProfile?> next,
-  ) {
+  void _onUser(AsyncValue<UserProfile?>? _, AsyncValue<UserProfile?> next) {
     // 刷新中（invalidateSelf）会先来一帧 loading：保留基线，否则协议变化
     // 会在「loading 清空基线 → 新值到达」的过程中被吞掉。
     if (next.isLoading) return;

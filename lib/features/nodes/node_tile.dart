@@ -37,50 +37,68 @@ class NodeTile extends StatelessWidget {
     final cs = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    return Material(
-      color: selected ? cs.secondaryContainer.withValues(alpha: 0.35) : null,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _height),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Sp.md,
-              vertical: Sp.sm,
-            ),
-            child: Row(
-              children: [
-                _StatusDot(selected: selected, connected: connected),
-                const SizedBox(width: Sp.md),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayNodeName(node),
-                        style: textTheme.titleMedium,
-                        // 1 行省略（T3.5）。
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        displayNodeSubtitle(node),
-                        style: textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+    // 卡片：选中 secondaryContainer 高亮 + primary 边框；未选中跟 cardTheme 一致。
+    final bg = selected
+        ? cs.secondaryContainer.withValues(alpha: 0.5)
+        : (theme.brightness == Brightness.light
+              ? cs.surfaceContainerLowest
+              : cs.surfaceContainerLow);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? cs.primary : cs.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _height),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Sp.md,
+                vertical: Sp.sm,
+              ),
+              child: Row(
+                children: [
+                  _StatusDot(selected: selected, connected: connected),
+                  const SizedBox(width: Sp.md),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayNodeName(node),
+                          style: textTheme.titleMedium,
+                          // 1 行省略（T3.5）。
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          displayNodeSubtitle(node),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: Sp.sm),
-                LatencyBadge(latencyMs: node.latencyMs, measuring: measuring),
-              ],
+                  const SizedBox(width: Sp.sm),
+                  LatencyBadge(latencyMs: node.latencyMs, measuring: measuring),
+                ],
+              ),
             ),
           ),
         ),
