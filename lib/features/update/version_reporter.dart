@@ -5,59 +5,57 @@ import '../../core/network/api_client.dart';
 
 /// 版本决策（T9.6 / system-design §11）。
 ///
-/// 决策四规则由后端算好，App 只拿 `action` 决定展示方式：
-/// `none` 静默、`optional` 可稍后、`force` 不可关闭。
+/// App 启动时拉取后台「App 版本」配置，在本地拿「最新版本名」与自身版本
+/// 对比得出 [action]：`none` 静默、`optional` 可稍后、`force` 不可关闭。
 class VersionDecision {
   const VersionDecision({
     required this.action,
     this.latestName,
-    this.latestCode,
     this.downloadUrl,
-    this.size,
-    this.sha256,
     this.notes,
-    this.minSupportedCode,
   });
 
-  /// none | optional | force（后端返回值，未知值按 none 处理）。
+  /// none | optional | force。
   final String action;
   final String? latestName;
-  final int? latestCode;
   final String? downloadUrl;
-
-  /// 安装包字节数（用于展示与进度）。后端缺省时为空。
-  final int? size;
-  final String? sha256;
 
   /// 更新说明，换行分隔。
   final String? notes;
-  final int? minSupportedCode;
 
   bool get isNone => action == 'none';
   bool get isOptional => action == 'optional';
   bool get isForce => action == 'force';
 
-  /// 解析 `data` 字段。
+  /// 用后台配置 + 本机版本名在本地算决策。
   ///
-  /// 后端 Go 端数字字段实际按 number 返回（`latest_version_code`/`size`/
-  /// `min_supported_code`），但契约文字写的是「全字符串」，两种都吃；
-  /// 结构非法或 action 不认识时返回 null（一律按静默处理，绝不影响使用）。
-  static VersionDecision? fromJson(Object? data) {
+  /// 后台 `/api/app-version` 只返回配置数据，不做比较；比较在本地完成：
+  /// 未配置版本名 → null；本机版本不低于最新 → none；强制开关开 → force；
+  /// 否则 → optional。结构非法或未配置返回 null（一律按静默处理，绝不影响使用）。
+  static VersionDecision? fromConfig(
+    Object? data, {
+    required String localVersionName,
+  }) {
     if (data is! Map) return null;
-    final action = _str(data['action'])?.toLowerCase();
-    if (action == null) return null;
-    if (action != 'none' && action != 'optional' && action != 'force') {
-      return null;
+    final latestName = _str(data['latest_version_name']);
+    if (latestName == null) return null;
+    final force =
+        data['force_update'] == '1' || data['force_update'] == true;
+
+    final String action;
+    if (compareVersionName(localVersionName, latestName) >= 0) {
+      action = 'none';
+    } else if (force) {
+      action = 'force';
+    } else {
+      action = 'optional';
     }
+
     return VersionDecision(
       action: action,
-      latestName: _str(data['latest_version_name']),
-      latestCode: _int(data['latest_version_code']),
+      latestName: latestName,
       downloadUrl: _str(data['download_url']),
-      size: _int(data['size']),
-      sha256: _str(data['sha256']),
       notes: _str(data['notes'])?.replaceAll('\r\n', '\n'),
-      minSupportedCode: _int(data['min_supported_code']),
     );
   }
 
@@ -66,15 +64,21 @@ class VersionDecision {
     final s = (v is String ? v : v.toString()).trim();
     return s.isEmpty ? null : s;
   }
+}
 
-  static int? _int(Object? v) {
-    if (v == null) return null;
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    final s = v.toString().trim();
-    if (s.isEmpty) return null;
-    return int.tryParse(s) ?? double.tryParse(s)?.toInt();
+/// 语义化比较两个版本名（如 1.2.0 vs 1.10.0），返回 -1/0/1。
+/// 按「.」拆段逐段转整数比较；段数不足补 0；非数字段按 0。
+int compareVersionName(String a, String b) {
+  final as = a.split('.');
+  final bs = b.split('.');
+  final n = as.length > bs.length ? as.length : bs.length;
+  for (var i = 0; i < n; i++) {
+    final ai = i < as.length ? (int.tryParse(as[i].trim()) ?? 0) : 0;
+    final bi = i < bs.length ? (int.tryParse(bs[i].trim()) ?? 0) : 0;
+    if (ai < bi) return -1;
+    if (ai > bi) return 1;
   }
+  return 0;
 }
 
 /// 本机版本信息（`package_info_plus` 读取，测试可注入）。
@@ -91,9 +95,6 @@ class LocalVersion {
   /// pubspec 的 `+` 后缀（Android 即 versionCode），如 `1`。
   final String buildNumber;
   final String packageName;
-
-  /// 后端只按整数比较版本，非数字构建号按 0（一定会被要求升级）。
-  int get versionCode => int.tryParse(buildNumber.trim()) ?? 0;
 }
 
 typedef LocalVersionLoader = Future<LocalVersion> Function();
@@ -110,43 +111,29 @@ Future<LocalVersion> loadLocalVersionFromPlatform() async {
 
 /// `GET /api/app-version` 的取数入口（接口化便于单测注入）。
 abstract interface class VersionApi {
-  Future<Map<String, dynamic>?> fetch({
-    required String versionCode,
-    required String versionName,
-    required String packageId,
-  });
+  Future<Map<String, dynamic>?> fetch();
 }
 
-/// 走统一 [ApiClient]：Bearer 由拦截器按 TokenStore 自动带上
-/// （已登录时后端会把版本写回用户，供后台统计版本分布）。
+/// 走统一 [ApiClient]（Bearer 由拦截器自动带上，对公开接口无副作用）。
 class HttpVersionApi implements VersionApi {
   HttpVersionApi({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
   final ApiClient _client;
 
   @override
-  Future<Map<String, dynamic>?> fetch({
-    required String versionCode,
-    required String versionName,
-    required String packageId,
-  }) async {
+  Future<Map<String, dynamic>?> fetch() async {
     // ApiClient 拦截器已把 {code,msg,data} 解包成 data。
-    final data = await _client.request('/api/app-version', query: {
-      'version_code': versionCode,
-      'version_name': versionName,
-      'package_id': packageId,
-      'platform': 'android',
-    });
+    final data = await _client.request('/api/app-version');
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return null;
   }
 }
 
-/// 版本上报（T9.6）。
+/// 版本检查（T9.6）。
 ///
 /// 铁律：检查更新失败**绝不影响** App 正常使用 —— 超时、网络错误、
-/// 站点未配置（data 为 null）、action == none 一律静默返回 null。
+/// 站点未配置（data 为 null）、已最新一律静默返回 null。
 class VersionReporter {
   VersionReporter({
     VersionApi? api,
@@ -173,7 +160,7 @@ class VersionReporter {
   final Duration timeout;
   final Duration interval;
 
-  /// 上报本机版本并拿决策。
+  /// 拉取后台配置并在本地比较本机版本，得出决策。
   ///
   /// 返回 null = 静默跳过（不该做任何提示）。[force] 为 true 时忽略
   /// 24 小时节流（设置页「检查更新」用）。
@@ -181,37 +168,33 @@ class VersionReporter {
     final now = _now();
     if (!force && await _checkedRecently(now)) return null;
 
-    final Map<String, dynamic>? data;
+    final VersionDecision? decision;
     try {
-      // 读本机版本 + 请求整体受 5 秒超时约束（读包信息卡住也要能退出）。
-      data = await _fetch(localVersion: _localVersion, api: _api)
+      // 读本机版本 + 拉配置 + 本地比较，整体受 5 秒超时约束。
+      decision = await _fetch(localVersion: _localVersion, api: _api)
           .timeout(timeout);
     } catch (_) {
       // 超时 / 无网络 / 站点异常：静默，下次启动再试（不写 last_check_at）。
       return null;
     }
 
-    // 拿到响应（含 none）才记时间，避免断网时 24 小时不再重试。
+    // 拿到响应（含已最新）才记时间，避免断网时 24 小时不再重试。
     await _markChecked(now);
 
-    final decision = VersionDecision.fromJson(data);
     if (decision == null || decision.isNone) return null;
-    // 后端配了需升级却没给下载地址：弹了也装不了，按静默处理。
+    // 后台配了需升级却没给下载地址：弹了也装不了，按静默处理。
     if (decision.downloadUrl == null) return null;
     return decision;
   }
 
-  /// 读本机版本 → 调接口。抽出来只为了让上面那行 `.timeout()` 覆盖全过程。
-  static Future<Map<String, dynamic>?> _fetch({
+  /// 读本机版本 → 拉配置 → 本地算决策。抽出来让 `.timeout()` 覆盖全过程。
+  static Future<VersionDecision?> _fetch({
     required LocalVersionLoader localVersion,
     required VersionApi api,
   }) async {
     final local = await localVersion();
-    return api.fetch(
-      versionCode: '${local.versionCode}',
-      versionName: local.versionName,
-      packageId: local.packageName,
-    );
+    final data = await api.fetch();
+    return VersionDecision.fromConfig(data, localVersionName: local.versionName);
   }
 
   Future<bool> _checkedRecently(DateTime now) async {

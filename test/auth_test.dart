@@ -7,7 +7,6 @@ import 'package:controlhub_app/core/network/api_client.dart';
 import 'package:controlhub_app/core/network/api_exception.dart';
 import 'package:controlhub_app/core/storage/token_store.dart';
 import 'package:controlhub_app/data/models/user_profile.dart';
-import 'package:controlhub_app/data/repositories/auth_repository.dart';
 
 /// FlutterSecureStorage 平台桩：内存 Map 实现（单测用，无平台通道）。
 class _FakeSecureStorage extends FlutterSecureStoragePlatform {
@@ -74,13 +73,6 @@ void main() {
       await TokenStore.write('expired-token');
       // 模拟 userProvider 401 分支的清 token 动作。
       await TokenStore.clear();
-      expect(await TokenStore.read(), isNull);
-    });
-
-    test('logout：清 token', () async {
-      await TokenStore.write('tok-1');
-      final repo = AuthRepository();
-      await repo.logout();
       expect(await TokenStore.read(), isNull);
     });
 

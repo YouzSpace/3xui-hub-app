@@ -1,13 +1,12 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
-import '../../core/storage/prefs.dart';
 import '../../core/storage/token_store.dart';
 import '../models/user_profile.dart';
 
 /// 认证仓库（T2.2）：唯一能碰 ApiClient 的认证入口。
 ///
-/// 铁律：登录成功写 TokenStore；登出清 token + 清用户缓存；
-/// 断 VPN 是占位（M4 的 VpnController 接入后由调用方联动）。
+/// 铁律：登录成功写 TokenStore。退出登录的清理走 settings 的 LogoutService
+/// （断 VPN → 清 token → 清缓存），不在这里做。
 class AuthRepository {
   AuthRepository({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
@@ -28,13 +27,6 @@ class AuthRepository {
       throw const ApiException(ApiException.codeParse, '服务响应异常，请稍后重试');
     }
     return UserProfile.fromJson(data);
-  }
-
-  /// 登出：清 token + 清用户缓存 + 断 VPN 占位。
-  Future<void> logout() async {
-    await TokenStore.clear();
-    await Prefs.clearCache();
-    // TODO(M4): 接 VpnController，登出时断开 VPN。
   }
 
   Future<String> _login(String path, Map<String, dynamic> body) async {

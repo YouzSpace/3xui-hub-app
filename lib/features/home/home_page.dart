@@ -13,6 +13,7 @@ import '../plans/plans_routes.dart';
 import '../shell/app_shell.dart';
 import '../update/update_dialog.dart';
 import '../update/update_providers.dart';
+import '../update/version_reporter.dart';
 import 'connect_area.dart';
 import 'home_providers.dart';
 import 'home_stagger.dart';
@@ -40,6 +41,20 @@ class HomePage extends ConsumerWidget {
       });
     });
 
+    // force 更新（后台强制开关开）→ 首页渲染后直接弹不可关闭的更新框。
+    ref.listen<AsyncValue<VersionDecision?>>(updateDecisionProvider, (_, next) {
+      final decision = next.valueOrNull;
+      if (decision == null || !decision.isForce) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        showUpdateDialog(
+          context,
+          decision,
+          installer: ref.read(apkInstallerProvider),
+        );
+      });
+    });
+
     final user = ref.watch(userProvider);
     final site = ref.watch(siteContentProvider).valueOrNull;
     final announcement = site?.announcement.trim() ?? '';
@@ -49,6 +64,7 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       appBar: _HomeAppBar(
         siteTitle: site?.siteTitle ?? '',
+        siteLogo: site?.siteLogo ?? '',
         hasNotice: hasNotice,
         hasUnread: hasNotice && !noticeRead,
         onNoticeTap: !hasNotice
@@ -87,12 +103,14 @@ class HomePage extends ConsumerWidget {
 class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _HomeAppBar({
     required this.siteTitle,
+    required this.siteLogo,
     required this.hasNotice,
     required this.hasUnread,
     required this.onNoticeTap,
   });
 
   final String siteTitle;
+  final String siteLogo;
   final bool hasNotice;
   final bool hasUnread;
   final VoidCallback? onNoticeTap;
@@ -116,8 +134,18 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: cs.primaryContainer,
               borderRadius: BorderRadius.circular(Sp.sm),
             ),
-            child: Icon(Icons.shield_moon_outlined,
-                size: 20, color: cs.onPrimaryContainer),
+            clipBehavior: Clip.antiAlias,
+            child: siteLogo.trim().isEmpty
+                ? Icon(Icons.shield_moon_outlined,
+                    size: 20, color: cs.onPrimaryContainer)
+                : Image.network(
+                    siteLogo,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Icon(Icons.shield_moon_outlined,
+                        size: 20, color: cs.onPrimaryContainer),
+                  ),
           ),
           const SizedBox(width: Sp.md),
           Flexible(

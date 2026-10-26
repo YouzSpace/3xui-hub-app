@@ -11,6 +11,9 @@ import '../../vpn/bypass_china.dart';
 import '../feedback/feedback_launcher.dart';
 import '../plans/plans_routes.dart';
 import '../shell/app_shell.dart';
+import '../update/update_dialog.dart';
+import '../update/update_providers.dart';
+import '../update/version_reporter.dart';
 import 'hidden_api_base_sheet.dart';
 import 'logout_service.dart';
 import 'settings_providers.dart';
@@ -62,6 +65,7 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => _openFeedback(context, site.feedbackLink),
                 ),
               const _DisclaimerTile(),
+              const _CheckUpdateTile(),
               const _VersionTile(),
             ],
           ),
@@ -221,6 +225,60 @@ class _VersionTile extends ConsumerWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(const SnackBar(content: Text('地址已保存，重启后生效')));
+  }
+}
+
+/// 检查更新：手动触发（绕 24h 节流），有新版弹更新框，无新版提示已最新。
+class _CheckUpdateTile extends ConsumerStatefulWidget {
+  const _CheckUpdateTile();
+
+  @override
+  ConsumerState<_CheckUpdateTile> createState() => _CheckUpdateTileState();
+}
+
+class _CheckUpdateTileState extends ConsumerState<_CheckUpdateTile> {
+  bool _checking = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsTile(
+      title: '检查更新',
+      icon: Icons.system_update_alt_outlined,
+      trailing: _checking
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : null,
+      onTap: _checking ? null : _check,
+    );
+  }
+
+  Future<void> _check() async {
+    setState(() => _checking = true);
+    VersionDecision? decision;
+    try {
+      decision = await checkUpdateManually(ref);
+    } catch (_) {
+      decision = null;
+    }
+    if (!mounted) return;
+    setState(() => _checking = false);
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (decision == null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('已是最新版本')));
+      return;
+    }
+    // 有更新：直接弹更新框（force / optional 都由弹窗自己处理形态）。
+    await showUpdateDialog(
+      context,
+      decision,
+      installer: ref.read(apkInstallerProvider),
+    );
   }
 }
 

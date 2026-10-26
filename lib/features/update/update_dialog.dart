@@ -144,21 +144,6 @@ class UpdateDialog extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (_hasSize(decision)) ...[
-                  const SizedBox(height: Sp.md),
-                  Row(
-                    children: [
-                      Icon(Icons.sd_storage_outlined,
-                          size: 20, color: cs.onSurfaceVariant),
-                      const SizedBox(width: Sp.sm),
-                      Text(
-                        '安装包 ${formatBytes(decision.size!)}',
-                        style: textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ],
                 const SizedBox(height: Sp.lg),
                 _buildFooter(context, config),
               ],
@@ -286,11 +271,6 @@ class UpdateDialog extends StatelessWidget {
     }
   }
 
-  static bool _hasSize(VersionDecision decision) {
-    final size = decision.size;
-    return size != null && size > 0;
-  }
-
   /// `新版本 1.2.0`（没有版本名就退化成只有标题）。
   static String? versionLabel(VersionDecision decision) {
     final name = decision.latestName;
@@ -359,7 +339,7 @@ class _UpdateFlowDialogState extends State<UpdateFlowDialog> {
 
     final result = await widget.installer.downloadAndInstall(
       url: url,
-      expectedSha256: widget.decision.sha256,
+      expectedSha256: null,
       onProgress: (p) {
         if (!mounted) return;
         setState(() => _progress = p);

@@ -12,10 +12,14 @@ class SiteContent {
   /// 外部反馈链接（TG 群 / 表单）；空串 = 站点未配置反馈入口。
   final String feedbackLink;
 
+  /// 站点 Logo URL（后台「站点信息」配置）；空串 = 未配置，用默认图标。
+  final String siteLogo;
+
   const SiteContent({
     required this.siteTitle,
     required this.announcement,
     required this.feedbackLink,
+    this.siteLogo = '',
   });
 
   /// 公告是否可展示（纯空白视为无公告）。
@@ -24,12 +28,16 @@ class SiteContent {
   /// 反馈入口是否可展示。
   bool get hasFeedbackLink => feedbackLink.trim().isNotEmpty;
 
+  /// 是否配置了站点 Logo。
+  bool get hasLogo => siteLogo.trim().isNotEmpty;
+
   /// site-config 所有值都是字符串，但历史站点可能混入 null，统一兜成空串。
   factory SiteContent.fromJson(Map<String, dynamic> json) {
     return SiteContent(
       siteTitle: _toStr(json['site_title']).trim(),
       announcement: _toStr(json['announcement']),
       feedbackLink: _toStr(json['feedback_link']).trim(),
+      siteLogo: _toStr(json['site_logo']).trim(),
     );
   }
 }

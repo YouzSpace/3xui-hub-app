@@ -15,24 +15,16 @@ import 'package:controlhub_app/features/update/update_dialog.dart';
 import 'package:controlhub_app/features/update/update_providers.dart';
 import 'package:controlhub_app/features/update/version_reporter.dart';
 
-/// 记录请求参数、按用例返回预设 data 的桩（T9.6 单测）。
+/// 记录调用次数、按用例返回预设 data 的桩（T9.6 单测）。
 class _StubVersionApi implements VersionApi {
   _StubVersionApi(this._respond);
 
   final Future<Map<String, dynamic>?> Function() _respond;
-  final List<Map<String, String>> calls = [];
+  int callCount = 0;
 
   @override
-  Future<Map<String, dynamic>?> fetch({
-    required String versionCode,
-    required String versionName,
-    required String packageId,
-  }) {
-    calls.add({
-      'version_code': versionCode,
-      'version_name': versionName,
-      'package_id': packageId,
-    });
+  Future<Map<String, dynamic>?> fetch() {
+    callCount++;
     return _respond();
   }
 }
@@ -44,26 +36,18 @@ LocalVersion _local([String code = '13']) => LocalVersion(
       packageName: 'com.controlhub.controlhub_app',
     );
 
-/// 后端 data 的典型 shape（Go 端数字字段是 number，字符串字段可能是空串/null）。
+/// 后台「App 版本」配置的典型 shape（force_update 是字符串 '1'/'0'）。
 Map<String, dynamic> _data({
-  String action = 'optional',
   Object? latestName = '1.5.0',
-  Object? latestCode = 15,
   Object? url = 'https://dl.example.com/app-1.5.0.apk',
-  Object? size = 38200000,
-  Object? sha = 'a1b2c3',
   Object? notes = '修复连接超时\n优化测速',
-  Object? minSupported = 10,
+  Object? force = '0',
 }) =>
     {
-      'action': action,
       'latest_version_name': latestName,
-      'latest_version_code': latestCode,
       'download_url': url,
-      'size': size,
-      'sha256': sha,
       'notes': notes,
-      'min_supported_code': minSupported,
+      'force_update': force,
     };
 
 VersionReporter _reporter(
@@ -85,38 +69,52 @@ void main() {
   });
 
   // ---------------------------------------------------------------- T9.6
-  group('T9.6 版本上报：五种返回', () {
-    test('① action=none → 返回 null 并静默', () async {
-      final api = _StubVersionApi(() async => _data(action: 'none'));
+  group('T9.6 版本检查：本地比较决策', () {
+    test('① 未配置版本名 → 返回 null 并静默', () async {
+      final api = _StubVersionApi(() async => _data(latestName: ''));
       expect(await _reporter(api).report(), isNull);
-      // 上报本身仍发生了（后端要统计版本分布）。
-      expect(api.calls.single['version_code'], '13');
     });
 
-    test('② action=optional → 返回完整决策', () async {
+    test('② 本地低于最新且无强制 → optional 完整决策', () async {
       final api = _StubVersionApi(() async => _data());
       final d = await _reporter(api).report();
       expect(d, isNotNull);
       expect(d!.isOptional, isTrue);
       expect(d.latestName, '1.5.0');
-      expect(d.latestCode, 15);
       expect(d.downloadUrl, 'https://dl.example.com/app-1.5.0.apk');
-      expect(d.size, 38200000);
-      expect(d.sha256, 'a1b2c3');
-      expect(d.minSupportedCode, 10);
       // 更新说明落进决策时已按 \n 归一（\r\n 也不会留 \r）。
       expect(d.notes, '修复连接超时\n优化测速');
     });
 
-    test('③ action=force → 返回 force 决策', () async {
-      final api = _StubVersionApi(() async => _data(action: 'force'));
+    test('③ 强制开关开 → force 决策', () async {
+      final api = _StubVersionApi(() async => _data(force: '1'));
       final d = await _reporter(api).report();
       expect(d, isNotNull);
       expect(d!.isForce, isTrue);
       expect(d.isOptional, isFalse);
     });
 
-    test('④ 超时 → 返回 null，不阻塞调用方', () async {
+    test('④ 本机版本已最新 → 返回 null 静默', () async {
+      final api = _StubVersionApi(() async => _data(latestName: '1.3.0'));
+      expect(await _reporter(api).report(), isNull);
+    });
+
+    test('⑤ 语义化比较：1.10.0 高于 1.9.0（非字典序）', () async {
+      final api = _StubVersionApi(() async => _data(latestName: '1.10.0'));
+      final reporter = VersionReporter(
+        api: api,
+        localVersion: () async => const LocalVersion(
+          versionName: '1.9.0',
+          buildNumber: '9',
+          packageName: 'pkg',
+        ),
+      );
+      final d = await reporter.report();
+      expect(d, isNotNull);
+      expect(d!.isOptional, isTrue);
+    });
+
+    test('⑥ 超时 → 返回 null，不阻塞调用方', () async {
       final api = _StubVersionApi(() async {
         await Future<void>.delayed(const Duration(milliseconds: 300));
         return _data();
@@ -128,77 +126,63 @@ void main() {
       expect(d, isNull);
     });
 
-    test('⑤ data 为 null（站点未配置）→ 返回 null', () async {
+    test('⑦ data 为 null（站点未配置）→ 返回 null', () async {
       final api = _StubVersionApi(() async => null);
       expect(await _reporter(api).report(), isNull);
     });
 
-    test('附加：网络异常 → 返回 null（检查更新绝不影响使用）', () async {
+    test('⑧ 网络异常 → 返回 null（检查更新绝不影响使用）', () async {
       final api = _StubVersionApi(() async => throw const SocketException('x'));
       expect(await _reporter(api).report(), isNull);
     });
 
-    test('附加：optional 但没给 download_url → 按静默处理', () async {
+    test('⑨ 需升级但没给 download_url → 按静默处理', () async {
       final api = _StubVersionApi(() async => _data(url: ''));
       expect(await _reporter(api).report(), isNull);
     });
 
-    test('上报参数：version_code/version_name/package_id 都来自本机', () async {
-      final api = _StubVersionApi(() async => _data(action: 'none'));
-      await _reporter(api).report();
-      expect(api.calls.single, {
-        'version_code': '13',
-        'version_name': '1.3.0',
-        'package_id': 'com.controlhub.controlhub_app',
-      });
-    });
-
-    test('版本号非数字（构建号异常）→ version_code 按 0 上报', () async {
-      final api = _StubVersionApi(() async => _data(action: 'none'));
-      final reporter = VersionReporter(
-        api: api,
-        localVersion: () async => const LocalVersion(
-          versionName: 'dev',
-          buildNumber: 'dev',
-          packageName: 'pkg',
-        ),
+    test('VersionDecision.fromConfig 解析版本名与下载地址', () {
+      final d = VersionDecision.fromConfig(
+        {'latest_version_name': '1.5.0', 'download_url': 'https://x/y.apk'},
+        localVersionName: '1.3.0',
       );
-      await reporter.report();
-      expect(api.calls.single['version_code'], '0');
+      expect(d!.latestName, '1.5.0');
+      expect(d.downloadUrl, 'https://x/y.apk');
+      expect(d.isOptional, isTrue);
     });
 
-    test('VersionDecision.fromJson 吃字符串数字（契约文字写法）', () {
-      final d = VersionDecision.fromJson({
-        'action': 'optional',
-        'latest_version_code': '15',
-        'size': '38200000',
-        'min_supported_code': '10',
-        'latest_version_name': '1.5.0',
-        'download_url': 'https://x/y.apk',
-      });
-      expect(d!.latestCode, 15);
-      expect(d.size, 38200000);
-      expect(d.minSupportedCode, 10);
-    });
-
-    test('VersionDecision.fromJson 未知 action / 非 Map → null', () {
-      expect(VersionDecision.fromJson({'action': 'weird'}), isNull);
-      expect(VersionDecision.fromJson({'no_action': 1}), isNull);
-      expect(VersionDecision.fromJson('oops'), isNull);
-      expect(VersionDecision.fromJson(null), isNull);
+    test('VersionDecision.fromConfig 未配置 / 非 Map → null', () {
+      expect(
+        VersionDecision.fromConfig({'latest_version_name': ''},
+            localVersionName: '1.3.0'),
+        isNull,
+      );
+      expect(
+        VersionDecision.fromConfig({'no_version': 1},
+            localVersionName: '1.3.0'),
+        isNull,
+      );
+      expect(
+        VersionDecision.fromConfig('oops', localVersionName: '1.3.0'),
+        isNull,
+      );
+      expect(
+        VersionDecision.fromConfig(null, localVersionName: '1.3.0'),
+        isNull,
+      );
     });
 
     test('24 小时内不重复请求（last_check_at 节流）', () async {
-      final api = _StubVersionApi(() async => _data(action: 'none'));
+      final api = _StubVersionApi(() async => _data());
       final reporter = _reporter(api);
       await reporter.report();
-      expect(api.calls, hasLength(1));
+      expect(api.callCount, 1);
       // 第二次：节流命中，不再发请求。
       expect(await reporter.report(), isNull);
-      expect(api.calls, hasLength(1));
+      expect(api.callCount, 1);
       // force: true 绕过节流（设置页「检查更新」）。
       await reporter.report(force: true);
-      expect(api.calls, hasLength(2));
+      expect(api.callCount, 2);
     });
 
     test('断网失败不写 last_check_at：下次启动还会重试', () async {
@@ -211,7 +195,7 @@ void main() {
       expect(await reporter.report(), isNull); // 失败
       fail = false;
       expect(await reporter.report(), isNotNull); // 未节流 → 立刻重试成功
-      expect(api.calls, hasLength(2));
+      expect(api.callCount, 2);
     });
   });
 
@@ -261,7 +245,7 @@ void main() {
       );
     });
 
-    testWidgets('optional 弹窗：三个信息块都在，点稍后返回 later', (tester) async {
+    testWidgets('optional 弹窗：版本名与更新说明都在，点稍后返回 later', (tester) async {
       UpdateChoice? choice;
       await tester.pumpWidget(MaterialApp(
         home: Builder(
@@ -275,7 +259,6 @@ void main() {
                       action: 'optional',
                       latestName: '1.5.0',
                       downloadUrl: 'https://x/y.apk',
-                      size: 38200000,
                       notes: '修复连接超时\n优化测速',
                     ),
                     onLater: () => Navigator.of(context).pop(UpdateChoice.later),
@@ -297,8 +280,6 @@ void main() {
       expect(find.text('新版本 1.5.0'), findsOneWidget);
       expect(find.text('修复连接超时'), findsOneWidget);
       expect(find.text('优化测速'), findsOneWidget);
-      // 38200000 bytes = 36.4 MB（1024 进制，formatters.formatBytes）。
-      expect(find.text('安装包 36.4 MB'), findsOneWidget);
       expect(find.text('稍后'), findsOneWidget);
       expect(find.text('立即更新'), findsOneWidget);
 
@@ -382,7 +363,6 @@ void main() {
             decision: const VersionDecision(
               action: 'force',
               latestName: '2.0.0',
-              size: 1000,
             ),
             phase: UpdateDialogPhase.downloading,
             progress: const DownloadProgress(received: 500, total: 1000),
@@ -419,7 +399,7 @@ void main() {
       final events = <String>[];
       final api = _StubVersionApi(() async {
         events.add('fetch');
-        return _data(action: 'none');
+        return _data(latestName: '1.3.0');
       });
       var builtHome = 0;
 
@@ -452,7 +432,7 @@ void main() {
       expect(find.text('首页内容'), findsOneWidget);
 
       await tester.pumpAndSettle();
-      expect(api.calls, hasLength(1));
+      expect(api.callCount, 1);
       // 关键顺序：先 build 首页，再发上报 —— 上报不阻塞首屏。
       expect(events, ['build', 'fetch']);
       expect(builtHome, 1, reason: '检查更新不应重建首页');
@@ -462,7 +442,7 @@ void main() {
     });
 
     testWidgets('optional 决策 → 首屏出来后自动弹可选更新框', (tester) async {
-      final api = _StubVersionApi(() async => _data(action: 'optional'));
+      final api = _StubVersionApi(() async => _data());
       await tester.pumpWidget(ProviderScope(
         overrides: [
           versionReporterProvider.overrideWithValue(
@@ -488,7 +468,7 @@ void main() {
     });
 
     testWidgets('force 决策 → 自动弹强制更新框，返回键关不掉', (tester) async {
-      final api = _StubVersionApi(() async => _data(action: 'force'));
+      final api = _StubVersionApi(() async => _data(force: '1'));
       await tester.pumpWidget(ProviderScope(
         overrides: [
           versionReporterProvider.overrideWithValue(

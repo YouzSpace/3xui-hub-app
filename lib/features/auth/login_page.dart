@@ -7,6 +7,7 @@ import '../../core/theme/spacing.dart';
 import '../../core/ui/motion.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_providers.dart';
+import '../announcements/site_content_providers.dart';
 import 'login_controller.dart';
 
 /// 登录页（T2.4）：logo/站点名 + 邮箱密码 + 登录 + 订阅链接登录。
@@ -109,6 +110,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _showExpiredIfNeeded();
     final cs = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final site = ref.watch(siteContentProvider).valueOrNull;
+    final siteTitle = (site?.siteTitle ?? '').trim();
+    final siteLogo = (site?.siteLogo ?? '').trim();
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -119,9 +123,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 96),
-                Icon(Icons.shield, size: 64, color: cs.primary),
+                if (siteLogo.isEmpty)
+                  Icon(Icons.shield, size: 64, color: cs.primary)
+                else
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        siteLogo,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Icon(Icons.shield, size: 64, color: cs.primary),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: Sp.base),
-                Text('ControlHub', textAlign: TextAlign.center,
+                Text(siteTitle.isEmpty ? 'ControlHub' : siteTitle,
+                    textAlign: TextAlign.center,
                     style: text.headlineMedium),
                 const SizedBox(height: Sp.sm),
                 Text('登录后开始使用', textAlign: TextAlign.center,
