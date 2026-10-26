@@ -36,10 +36,11 @@ class _ThemeModeSheet extends ConsumerWidget {
 
     return SafeArea(
       top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(Sp.base, 0, Sp.base, Sp.sm),
             child: Text('主题模式', style: Theme.of(context).textTheme.titleLarge),
@@ -69,6 +70,7 @@ class _ThemeModeSheet extends ConsumerWidget {
           ),
           const SizedBox(height: Sp.base),
         ],
+      ),
       ),
     );
   }

@@ -154,11 +154,10 @@ void main() {
       expect(engine.startCalls, 0);
     });
 
-    test('3b. expiredAt == null → error「套餐已到期」', () async {
+    test('3b. expiredAt == null（total 流量套餐）→ 不拦截，继续连接', () async {
       await ctrl().connect(_node(), user: _user(expiredAt: null));
-      expect(state().status, VpnStatus.error);
-      expect(state().errorMessage, '套餐已到期，请先续费');
-      expect(engine.startCalls, 0);
+      expect(state().status, isNot(VpnStatus.error));
+      expect(engine.startCalls, 1);
     });
 
     test('4. 月流量耗尽 → error「本月流量已用完」', () async {

@@ -31,7 +31,9 @@ String? planBlockReason(UserProfile? user, {DateTime? now}) {
   if (!user.enabled) return '账号已被禁用，请联系管理员';
   if (user.planId == 0) return '还没有可用套餐，请先购买';
   final expired = user.expiredAt;
-  if (expired == null || !expired.isAfter(now ?? DateTime.now())) {
+  // total 流量套餐没有过期时间（expired_at 为 null），跳过过期校验；
+  // 只有周期套餐（month 等）才检查 expired_at。
+  if (expired != null && !expired.isAfter(now ?? DateTime.now())) {
     return '套餐已到期，请先续费';
   }
   final limit = user.monthlyTrafficLimit;
