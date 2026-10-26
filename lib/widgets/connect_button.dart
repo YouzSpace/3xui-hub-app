@@ -204,7 +204,11 @@ class _ConnectButtonState extends State<ConnectButton>
                     bg: bg,
                     fg: fg,
                     busy: busy,
-                    icon: blocked ? widget.blockedIcon : Icons.power_settings_new,
+                    icon: blocked
+                        ? widget.blockedIcon
+                        : status == VpnStatus.connected
+                            ? Icons.check
+                            : Icons.power_settings_new,
                   ),
                 ),
               ],
@@ -250,6 +254,11 @@ class _ConnectButtonState extends State<ConnectButton>
             duration: reduced ? Motion.reduced : Motion.small,
             switchInCurve: Motion.easeOut,
             switchOutCurve: Motion.easeIn,
+            // 图标切换（电源→√）缩放弹入，让「已连接」一眼可辨。
+            transitionBuilder: (child, animation) => ScaleTransition(
+              scale: CurvedAnimation(parent: animation, curve: Motion.spring),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
             child: _connecting
                 ? SizedBox(
                     key: const ValueKey('progress'),
@@ -259,7 +268,8 @@ class _ConnectButtonState extends State<ConnectButton>
                   )
                 : RotationTransition(
                     // 连接中图标旋转（1.2s/圈）；静止态锁在 0。
-                    key: const ValueKey('icon'),
+                    // key 用图标区分（电源 vs √），切换时才触发过渡动画。
+                    key: ValueKey(icon),
                     turns:
                         _connecting ? _pulse : const AlwaysStoppedAnimation(0),
                     child: Icon(icon, size: Sp.xxl + Sp.base, color: fg),

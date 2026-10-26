@@ -74,6 +74,8 @@ void main() {
     await _pump(tester, VpnStatus.connected, disableAnimations: true);
 
     expect(find.text('已连接'), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(Icons.power_settings_new), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(_material(tester).color, cs.primary);
 
