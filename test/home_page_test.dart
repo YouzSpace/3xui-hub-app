@@ -226,37 +226,21 @@ void main() {
   });
 
   group('T5.4 公告', () {
-    testWidgets('有公告：顶部条 + 红点；关闭后本次会话不再显示', (tester) async {
+    testWidgets('有公告：右上角铃铛亮红点', (tester) async {
       contentRepo.announcement = '今晚 23:00 维护，预计 30 分钟';
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-
-      expect(find.textContaining('今晚 23:00 维护'), findsOneWidget);
       expect(find.byIcon(Icons.notifications_active_outlined), findsOneWidget);
-
-      await tester.tap(find.byTooltip('关闭公告'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('今晚 23:00 维护'), findsNothing);
-      expect(
-        containerOf(tester).read(noticeDismissedProvider),
-        isTrue,
-        reason: '关闭状态只存内存，供本次会话复用',
-      );
     });
 
-    testWidgets('点击公告条 → AlertDialog 全文', (tester) async {
+    testWidgets('点击铃铛 → AlertDialog 全文', (tester) async {
       contentRepo.announcement = '第一行\n第二行\n第三行';
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.campaign_outlined));
+      await tester.tap(find.byIcon(Icons.notifications_active_outlined));
       await tester.pumpAndSettle();
-
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('公告'), findsOneWidget);
-      // 弹窗里是完整正文（列表条只显示前两行，但 Text.data 仍是全文，
-      // 所以这里限定在 AlertDialog 内部找）。
       expect(
         find.descendant(
           of: find.byType(AlertDialog),
@@ -267,10 +251,10 @@ void main() {
       );
     });
 
-    testWidgets('无公告：不显示公告条', (tester) async {
+    testWidgets('无公告：铃铛不亮红点', (tester) async {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.campaign_outlined), findsNothing);
+      expect(find.byIcon(Icons.notifications_none), findsOneWidget);
     });
   });
 

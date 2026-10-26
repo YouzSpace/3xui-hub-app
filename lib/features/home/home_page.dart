@@ -68,7 +68,7 @@ class HomePage extends ConsumerWidget {
               text: '未登录',
             );
           }
-          return _HomeBody(profile: profile, announcement: announcement);
+          return _HomeBody(profile: profile);
         },
       ),
     );
@@ -153,17 +153,14 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// 滚动区：公告 → 连接区 → 流量卡 → 更新提示，整页下拉刷新。
+/// 滚动区：连接区 → 流量卡 → 更新提示，整页下拉刷新。
 class _HomeBody extends ConsumerWidget {
-  const _HomeBody({required this.profile, required this.announcement});
+  const _HomeBody({required this.profile});
 
   final UserProfile profile;
-  final String announcement;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showNotice =
-        announcement.isNotEmpty && !ref.watch(noticeDismissedProvider);
     final update = ref.watch(optionalUpdateProvider);
 
     return RefreshIndicator(
@@ -178,21 +175,10 @@ class _HomeBody extends ConsumerWidget {
           Sp.xxl + Sp.base,
         ),
         children: [
-          if (showNotice) ...[
-            HomeStagger(
-              index: 0,
-              child: HomeNoticeBar(
-                announcement: announcement,
-                onDismiss: () =>
-                    ref.read(noticeDismissedProvider.notifier).state = true,
-              ),
-            ),
-            const SizedBox(height: Sp.base),
-          ],
-          HomeStagger(index: 1, child: ConnectArea(profile: profile)),
+          HomeStagger(index: 0, child: ConnectArea(profile: profile)),
           const SizedBox(height: Sp.lg),
           HomeStagger(
-            index: 2,
+            index: 1,
             child: TrafficCard(
               profile: profile,
               onBuyPlan: () => context.go(PlansRoutes.plans),
@@ -201,7 +187,7 @@ class _HomeBody extends ConsumerWidget {
           if (update != null) ...[
             const SizedBox(height: Sp.md),
             HomeStagger(
-              index: 3,
+              index: 2,
               child: UpdateHintBar(
                 versionName: update.latestName ?? '',
                 onTap: () => showUpdateDialog(

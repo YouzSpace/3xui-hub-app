@@ -18,9 +18,6 @@ import '../nodes/nodes_provider.dart';
 /// 写入后由首页消费并清空；只存内存，不落盘。
 final homeNoticeProvider = StateProvider<String?>((ref) => null);
 
-/// 公告是否已在本会话被关闭（T5.4：只存内存，绝不持久化）。
-final noticeDismissedProvider = StateProvider<bool>((ref) => false);
-
 /// 套餐层面的连接阻断原因；null = 允许点击连接。
 ///
 /// 规则与 `VpnController.validate()` 的第 1–4 条一致（未登录 / 禁用 / 无套餐 /
