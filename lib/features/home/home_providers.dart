@@ -62,9 +62,25 @@ final connectionToggleProvider = Provider<Future<void> Function()>((ref) {
       await controller.toggle();
       return;
     }
-    await controller.connect(ref.read(selectedNodeProvider));
+    await controller.connect(_resolveConnectNode(ref));
   };
 });
+
+/// 连接目标节点：自动选择开启时用延迟最低（有测速结果），否则用选中节点。
+///
+/// 测速还没出结果（或全部失败）时回退选中节点——反正连不上，用谁都是失败。
+Node? _resolveConnectNode(Ref ref) {
+  final selected = ref.read(selectedNodeProvider);
+  if (!ref.read(autoSelectFastestProvider)) return selected;
+  final nodes = ref.read(nodesProvider).valueOrNull ?? const <Node>[];
+  Node? fastest;
+  for (final n in nodes) {
+    final ms = n.latencyMs;
+    if (ms == null) continue;
+    if (fastest == null || ms < (fastest.latencyMs ?? 1 << 30)) fastest = n;
+  }
+  return fastest ?? selected;
+}
 
 /// 下拉刷新（T5.5）：同时刷新 userProvider 与 nodesProvider，且不重复请求。
 ///

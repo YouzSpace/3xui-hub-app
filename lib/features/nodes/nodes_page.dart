@@ -25,6 +25,8 @@ class NodesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nodes = ref.watch(nodesProvider);
     final autoSelect = ref.watch(autoSelectFastestProvider);
+    final measuring = ref.watch(measuringNodesProvider);
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,6 +45,32 @@ class NodesPage extends ConsumerWidget {
           ),
         ],
       ),
+      // 右下角闪电悬浮按钮：一键测全部节点真延迟（参考图样式：圆角矩形无文字）。
+      floatingActionButton: nodes.valueOrNull?.isNotEmpty == true
+          ? Padding(
+              padding: EdgeInsets.only(bottom: appBottomBarHeight),
+              child: FloatingActionButton(
+                tooltip: '一键测速',
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(Sp.base),
+                ),
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+                onPressed: () =>
+                    ref.read(nodesProvider.notifier).measureAll(),
+                child: measuring.isNotEmpty
+                    ? SizedBox(
+                        width: Sp.xl,
+                        height: Sp.xl,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: cs.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.bolt),
+              ),
+            )
+          : null,
       body: nodes.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(Sp.base),
@@ -128,6 +156,8 @@ class _NodeList extends ConsumerWidget {
   /// 点击：先选中（并持久化）；已连接时确认后断开重连到新节点。
   Future<void> _onTap(BuildContext context, WidgetRef ref, Node node) async {
     await ref.read(nodesProvider.notifier).select(node);
+    // 用户手动选节点 → 关闭自动选择（之后连接用手动选的节点）。
+    await ref.read(autoSelectFastestProvider.notifier).set(false);
     if (!context.mounted) return;
 
     final vpn = ref.read(vpnProvider);

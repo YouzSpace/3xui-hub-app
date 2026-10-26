@@ -274,6 +274,9 @@ void main() {
       final container = makeContainer();
       await container.read(nodesProvider.future);
 
+      // 默认已是开，先显式关掉，再打开以验证「打开」动作触发测速+切最快。
+      await container.read(nodesProvider.notifier).setAutoSelectFastest(false);
+
       engine.latency[repo.nodes[0].raw] = 200;
       engine.latency[repo.nodes[1].raw] = 30;
       engine.latency[repo.nodes[2].raw] = 120;
@@ -291,6 +294,9 @@ void main() {
       repo.nodes = [_node('HK'), _node('JP')];
       final container = makeContainer();
       await container.read(nodesProvider.future);
+
+      // 默认已是开，显式关闭后验证测速不切节点。
+      await container.read(nodesProvider.notifier).setAutoSelectFastest(false);
 
       engine.latency[repo.nodes[1].raw] = 10;
       await container.read(nodesProvider.notifier).measureAll();

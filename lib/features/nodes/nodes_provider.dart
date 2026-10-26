@@ -247,18 +247,19 @@ class AutoSelectFastestNotifier extends Notifier<bool> {
   @override
   bool build() {
     // 先返回默认值，异步回填（与 blockedApps 同一套做法）。
+    // 默认开：自动选延迟最低节点，符合「首页默认连最低延迟」的产品语义。
     unawaited(_restore());
-    return false;
+    return true;
   }
 
   Future<void> _restore() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final value = prefs.getBool(_keyAutoSelectFastest) ?? false;
+      final value = prefs.getBool(_keyAutoSelectFastest) ?? true;
       if (_touched || value == state) return;
       state = value;
     } catch (_) {
-      // 读失败保持默认关。
+      // 读失败保持默认开。
     }
   }
 
