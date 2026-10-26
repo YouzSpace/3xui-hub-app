@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_vless/flutter_vless.dart';
 
@@ -26,14 +27,15 @@ abstract class VpnEngine {
   Future<bool> requestPermission();
 
   /// 把分享链接转成 Xray JSON 配置（解析失败抛 [VpnException]）。
-  Future<String> buildConfig(String shareLink);
+  ///
+  /// [bypassChina] 为 true 时注入「国内直连、国外代理」的 routing 规则。
+  Future<String> buildConfig(String shareLink, {bool bypassChina = false});
 
   /// 启动隧道。config 为 Xray JSON 字符串；[remark] 是节点名，
   /// 原生前台服务通知用它展示「已连接 · {节点名}」。
   Future<void> start({
     required String remark,
     required String config,
-    List<String>? blockedApps,
   });
 
   /// 停止隧道。
@@ -96,10 +98,30 @@ class FlutterVlessEngine implements VpnEngine {
   Future<bool> requestPermission() => _vless.requestPermission();
 
   @override
-  Future<String> buildConfig(String shareLink) async {
+  Future<String> buildConfig(String shareLink, {bool bypassChina = false}) async {
     try {
       final parsed = FlutterVless.parse(shareLink);
-      return parsed.getFullConfiguration();
+      final config = parsed.fullConfiguration;
+      if (bypassChina) {
+        // 国内域名/IP 直连，其余走代理（规则模式）。geoip/geosite 数据由
+        // 插件 AAR 内置；outbound tag 与插件生成的一致（proxy/direct）。
+        config['routing'] = {
+          'domainStrategy': 'AsIs',
+          'rules': [
+            {
+              'type': 'field',
+              'domain': ['geosite:cn'],
+              'outboundTag': 'direct',
+            },
+            {
+              'type': 'field',
+              'ip': ['geoip:cn', 'geoip:private'],
+              'outboundTag': 'direct',
+            },
+          ],
+        };
+      }
+      return jsonEncode(config);
     } catch (_) {
       throw const VpnException('节点链接无法解析');
     }
@@ -109,7 +131,6 @@ class FlutterVlessEngine implements VpnEngine {
   Future<void> start({
     required String remark,
     required String config,
-    List<String>? blockedApps,
   }) async {
     // 插件在已授权时立即返回 true，不会重复弹框。
     final allowed = await _vless.requestPermission();
@@ -120,7 +141,6 @@ class FlutterVlessEngine implements VpnEngine {
     await _vless.startVless(
       remark: remark,
       config: config,
-      blockedApps: blockedApps,
       proxyOnly: false,
     );
   }

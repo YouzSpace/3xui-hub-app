@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/node.dart';
 import '../data/models/user_profile.dart';
 import '../providers/auth_providers.dart';
-import 'blocked_apps.dart';
+import 'bypass_china.dart';
 import 'vpn_engine.dart';
 import 'vpn_state.dart';
 
@@ -104,12 +104,13 @@ class VpnController extends Notifier<VpnState> {
     state = state.copyWith(status: VpnStatus.preparing, errorMessage: null);
     try {
       await _engine.initialize();
-      final config = await _engine.buildConfig(node!.raw);
-      final blocked = ref.read(blockedAppsProvider);
+      final config = await _engine.buildConfig(
+        node!.raw,
+        bypassChina: ref.read(bypassChinaProvider),
+      );
       await _engine.start(
         remark: node.name,
         config: config,
-        blockedApps: blocked,
       );
       // 原生侧状态回调会把状态推进到 connecting/connected；
       // 这里只兜底置 connecting，避免回调延迟时 UI 卡在 preparing。

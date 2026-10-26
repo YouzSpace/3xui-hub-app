@@ -57,12 +57,10 @@ class _FakeVlessPlatform extends VlessPlatform {
     if (startError != null) throw startError!;
     lastRemark = remark;
     lastConfig = config;
-    lastBlockedApps = blockedApps;
   }
 
   String? lastRemark;
   String? lastConfig;
-  List<String>? lastBlockedApps;
 
   @override
   Future<void> stopVless() async {

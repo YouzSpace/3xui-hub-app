@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/config/api_config.dart';
 import 'providers/auth_providers.dart';
-import 'vpn/blocked_apps.dart';
+import 'vpn/bypass_china.dart';
 import 'vpn/vpn_controller.dart';
 
 Future<void> main() async {
@@ -26,8 +26,8 @@ Future<void> main() async {
   try {
     await providerContainer.read(vpnEngineProvider).initialize();
   } catch (_) {}
-  // 分应用代理勾选回填，不阻塞启动（restore 内部已兜底空列表）。
-  unawaited(providerContainer.read(blockedAppsProvider.notifier).restore());
+  // 「绕开国内」开关回填，不阻塞启动。
+  unawaited(providerContainer.read(bypassChinaProvider.notifier).restore());
   runApp(UncontrolledProviderScope(
     container: providerContainer,
     child: const ControlHubApp(),

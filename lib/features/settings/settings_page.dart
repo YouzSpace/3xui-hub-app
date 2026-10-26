@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/spacing.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/theme_mode_provider.dart';
-import '../../vpn/blocked_apps.dart';
+import '../../vpn/bypass_china.dart';
 // 反馈外链的打开方式复用 M7 的实现：它做了 scheme 白名单校验
 // （只放行 http/https），避免后台配置项变成任意 scheme 的跳板。
 import '../feedback/feedback_launcher.dart';
@@ -45,7 +45,12 @@ class SettingsPage extends ConsumerWidget {
         ),
         children: [
           const SettingsSectionHeader('通用'),
-          SettingsGroup(children: const [_ThemeModeTile(), _SplitTunnelTile()]),
+          SettingsGroup(
+            children: const [
+              _ThemeModeTile(),
+              _BypassChinaTile(),
+            ],
+          ),
           const SettingsSectionHeader('账号'),
           SettingsGroup(
             children: [
@@ -64,6 +69,7 @@ class SettingsPage extends ConsumerWidget {
                   icon: Icons.feedback_outlined,
                   onTap: () => _openFeedback(context, site.feedbackLink),
                 ),
+              const _DisclaimerTile(),
               const _VersionTile(),
             ],
           ),
@@ -107,18 +113,23 @@ class _ThemeModeTile extends ConsumerWidget {
   }
 }
 
-/// 分应用代理：副标题实时显示已选数量（T8.2）。
-class _SplitTunnelTile extends ConsumerWidget {
-  const _SplitTunnelTile();
+/// 绕开国内：国内域名/IP 直连、国外走代理（规则模式）。
+class _BypassChinaTile extends ConsumerWidget {
+  const _BypassChinaTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count = ref.watch(blockedAppsProvider).length;
+    final bypass = ref.watch(bypassChinaProvider);
     return SettingsTile(
-      title: '分应用代理',
-      subtitle: count == 0 ? '未选择应用' : '已选 $count 个应用不走代理',
-      icon: Icons.apps_outlined,
-      onTap: () => context.push(SettingsRoutes.splitTunnel),
+      title: '绕开国内',
+      subtitle: '国内应用直连，国外走代理',
+      icon: Icons.public_off_outlined,
+      trailing: Switch(
+        value: bypass,
+        onChanged: (_) => ref.read(bypassChinaProvider.notifier).set(!bypass),
+      ),
+      onTap: () => ref.read(bypassChinaProvider.notifier).set(!bypass),
+      showChevron: false,
     );
   }
 }
@@ -150,6 +161,38 @@ class _PlansTile extends StatelessWidget {
       title: '套餐',
       icon: Icons.storefront_outlined,
       onTap: () => context.push(PlansRoutes.plans),
+    );
+  }
+}
+
+/// 免责声明：网络加速工具的合规声明。
+class _DisclaimerTile extends StatelessWidget {
+  const _DisclaimerTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsTile(
+      title: '免责声明',
+      icon: Icons.gavel_outlined,
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('免责声明'),
+          content: const SingleChildScrollView(
+            child: Text(
+              '本工具仅供学习、研究与合法用途。\n\n'
+              '使用前请确认您的行为符合当地法律法规。\n\n'
+              '严禁利用本工具从事任何违法违规活动，由此产生的一切法律后果由使用者自行承担。',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

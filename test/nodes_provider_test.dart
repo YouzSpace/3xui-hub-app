@@ -46,13 +46,12 @@ class _FakeEngine implements VpnEngine {
   Future<bool> requestPermission() async => true;
 
   @override
-  Future<String> buildConfig(String shareLink) async => '{}';
+  Future<String> buildConfig(String shareLink, {bool bypassChina = false}) async => '{}';
 
   @override
   Future<void> start({
     required String remark,
     required String config,
-    List<String>? blockedApps,
   }) async =>
       startCalls++;
 
@@ -330,13 +329,12 @@ class _ProbeEngine implements VpnEngine {
   Future<bool> requestPermission() async => true;
 
   @override
-  Future<String> buildConfig(String shareLink) async => '{}';
+  Future<String> buildConfig(String shareLink, {bool bypassChina = false}) async => '{}';
 
   @override
   Future<void> start({
     required String remark,
     required String config,
-    List<String>? blockedApps,
   }) async {}
 
   @override

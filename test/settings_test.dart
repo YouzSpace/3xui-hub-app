@@ -10,10 +10,8 @@ import 'package:controlhub_app/features/settings/logout_service.dart';
 import 'package:controlhub_app/features/settings/settings_page.dart';
 import 'package:controlhub_app/features/settings/settings_providers.dart';
 import 'package:controlhub_app/features/settings/site_config.dart';
-import 'package:controlhub_app/features/settings/split_tunnel_page.dart';
 import 'package:controlhub_app/features/settings/version_tap_trigger.dart';
 import 'package:controlhub_app/providers/theme_mode_provider.dart';
-import 'package:controlhub_app/vpn/blocked_apps.dart';
 
 UserProfile _user({String protocol = 'vless'}) => UserProfile(
       id: 1,
@@ -136,10 +134,10 @@ void main() {
       expect(calls, ['vpn', 'token', 'userCache', 'subCache']);
     });
 
-    test('清订阅缓存不碰主题与分应用代理', () async {
+    test('清订阅缓存不碰主题与绕开国内', () async {
       SharedPreferences.setMockInitialValues({
         Prefs.keyThemeMode: 'dark',
-        Prefs.keyBlockedApps: ['com.foo.bar'],
+        Prefs.keyBypassChina: true,
         Prefs.keySelectedNode: 'vless://node',
         Prefs.keyCacheMe: '{}',
       });
@@ -149,32 +147,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(Prefs.keySelectedNode), isNull);
       expect(prefs.getString(Prefs.keyThemeMode), 'dark');
-      expect(prefs.getStringList(Prefs.keyBlockedApps), ['com.foo.bar']);
-    });
-  });
-
-  group('T8.2 分应用代理保存', () {
-    test('setApps 落盘到 prefs（键 blocked_apps），排序后写入', () async {
-      final c = ProviderContainer();
-      addTearDown(c.dispose);
-
-      await c.read(blockedAppsProvider.notifier).setApps(['com.b', 'com.a']);
-
-      expect(c.read(blockedAppsProvider), ['com.b', 'com.a']);
-      expect(await Prefs.getBlockedApps(), ['com.b', 'com.a']);
-    });
-
-    test('restore 从 prefs 回填已选列表', () async {
-      SharedPreferences.setMockInitialValues({
-        Prefs.keyBlockedApps: ['com.tencent.mm', 'com.tencent.mobileqq'],
-      });
-
-      final c = ProviderContainer();
-      addTearDown(c.dispose);
-      await c.read(blockedAppsProvider.notifier).restore();
-
-      expect(c.read(blockedAppsProvider),
-          ['com.tencent.mm', 'com.tencent.mobileqq']);
+      expect(prefs.getBool(Prefs.keyBypassChina), isTrue);
     });
   });
 
@@ -293,41 +266,13 @@ void main() {
       expect(find.text('账号'), findsOneWidget);
       expect(find.text('关于'), findsOneWidget);
       expect(find.text('主题模式'), findsOneWidget);
-      expect(find.text('分应用代理'), findsOneWidget);
+      expect(find.text('绕开国内'), findsOneWidget);
       expect(find.text('v1.0.0 (1)'), findsOneWidget);
       expect(find.text('套餐'), findsOneWidget);
       expect(find.text('意见反馈'), findsOneWidget);
       expect(find.text('退出登录'), findsOneWidget);
       // 未登录（无 token）不显示协议切换。
       expect(find.text('协议切换'), findsNothing);
-    });
-
-    testWidgets('分应用代理页：无可用应用时显示空态，顶部计数为 0', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          // 测试环境没有 MethodChannel，注入固定应用列表避免依赖平台。
-          installedAppsProvider.overrideWith((ref) async => const [
-                InstalledApp(packageName: 'com.tencent.mm', appName: '微信'),
-                InstalledApp(packageName: 'com.tencent.mobileqq', appName: 'QQ'),
-              ]),
-        ],
-        child: const MaterialApp(home: SplitTunnelPage()),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('已选 0 个应用不走代理'), findsOneWidget);
-      expect(find.text('微信'), findsOneWidget);
-      expect(find.text('QQ'), findsOneWidget);
-
-      // 勾选一个应用 → 计数变 1（勾选 = 不走代理）。
-      await tester.tap(find.text('微信'));
-      await tester.pumpAndSettle();
-      expect(find.text('已选 1 个应用不走代理'), findsOneWidget);
-
-      // 保存 → 写 prefs。
-      await tester.tap(find.text('保存'));
-      await tester.pumpAndSettle();
-      expect(await Prefs.getBlockedApps(), ['com.tencent.mm']);
     });
 
     testWidgets('连点版本号 5 次弹出隐藏地址入口', (tester) async {
@@ -355,25 +300,6 @@ void main() {
       await tester.tap(find.text('v1.0.0 (1)'));
       await tester.pump();
       expect(triggered, 1);
-    });
-
-    testWidgets('分应用代理页：搜索框过滤应用', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          installedAppsProvider.overrideWith((ref) async => const [
-                InstalledApp(packageName: 'com.tencent.mm', appName: '微信'),
-                InstalledApp(packageName: 'com.tencent.mobileqq', appName: 'QQ'),
-              ]),
-        ],
-        child: const MaterialApp(home: SplitTunnelPage()),
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), 'qq');
-      await tester.pumpAndSettle();
-
-      expect(find.text('QQ'), findsOneWidget);
-      expect(find.text('微信'), findsNothing);
     });
   });
 }

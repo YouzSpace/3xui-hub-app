@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/transitions.dart';
 import 'my_info_page.dart';
 import 'settings_page.dart';
-import 'split_tunnel_page.dart';
 
 /// M8 路由（T8.1–T8.5）。
 ///
@@ -17,7 +16,6 @@ import 'split_tunnel_page.dart';
 /// - `/tutorials`   教程（M7 的页面，这里只借路径做跳转，不注册）
 abstract class SettingsRoutes {
   static const settings = '/settings';
-  static const splitTunnel = '/split-tunnel';
   static const myInfo = '/my-info';
   static const tutorials = '/tutorials';
 
@@ -31,13 +29,6 @@ final List<GoRoute> settingsRoutes = [
     path: SettingsRoutes.settings,
     pageBuilder: (context, state) =>
         AppTransitions.fadeLift(state: state, child: const SettingsPage()),
-  ),
-  GoRoute(
-    path: SettingsRoutes.splitTunnel,
-    pageBuilder: (context, state) => AppTransitions.slideFromRight(
-      state: state,
-      child: const SplitTunnelPage(),
-    ),
   ),
   GoRoute(
     path: SettingsRoutes.myInfo,

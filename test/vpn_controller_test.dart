@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:controlhub_app/data/models/node.dart';
 import 'package:controlhub_app/data/models/user_profile.dart';
-import 'package:controlhub_app/vpn/blocked_apps.dart';
 import 'package:controlhub_app/vpn/vpn_controller.dart';
 import 'package:controlhub_app/vpn/vpn_engine.dart';
 import 'package:controlhub_app/vpn/vpn_state.dart';
@@ -21,7 +20,6 @@ class _MockEngine implements VpnEngine {
   final _controller = StreamController<VpnStatus>.broadcast();
   String? lastRemark;
   String? lastConfig;
-  List<String>? lastBlockedApps;
 
   @override
   Future<void> initialize() async => initializeCalls++;
@@ -30,20 +28,18 @@ class _MockEngine implements VpnEngine {
   Future<bool> requestPermission() async => true;
 
   @override
-  Future<String> buildConfig(String shareLink) async =>
+  Future<String> buildConfig(String shareLink, {bool bypassChina = false}) async =>
       '{"inbounds":[],"outbounds":[]}';
 
   @override
   Future<void> start({
     required String remark,
     required String config,
-    List<String>? blockedApps,
   }) async {
     startCalls++;
     if (startError != null) throw startError!;
     lastRemark = remark;
     lastConfig = config;
-    lastBlockedApps = blockedApps;
   }
 
   @override
@@ -255,14 +251,6 @@ void main() {
       expect(state().status, VpnStatus.connecting);
       await c.connect(_node(), user: _user());
       expect(engine.startCalls, 1);
-    });
-
-    test('连接时透传分应用代理包名列表', () async {
-      await container
-          .read(blockedAppsProvider.notifier)
-          .setApps(['com.foo.bar', 'com.baz.qux']);
-      await ctrl().connect(_node(), user: _user());
-      expect(engine.lastBlockedApps, ['com.foo.bar', 'com.baz.qux']);
     });
   });
 }

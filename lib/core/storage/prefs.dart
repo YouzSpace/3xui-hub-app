@@ -8,7 +8,7 @@ class Prefs {
   static const String keySelectedNode = 'selected_node';
   static const String keyCacheMe = 'cache_me';
   static const String keyCacheSiteConfig = 'cache_site_config';
-  static const String keyBlockedApps = 'blocked_apps';
+  static const String keyBypassChina = 'bypass_china';
 
   static Future<SharedPreferences> _p() => SharedPreferences.getInstance();
 
@@ -36,12 +36,12 @@ class Prefs {
   static Future<void> setCacheSiteConfig(String v) async =>
       (await _p()).setString(keyCacheSiteConfig, v);
 
-  /// 分应用代理被排除的应用包名列表（M4 T4.5）。
-  static Future<List<String>> getBlockedApps() async =>
-      (await _p()).getStringList(keyBlockedApps) ?? const [];
+  /// 「绕开国内」开关：国内域名/IP 直连，国外走代理（规则模式）。
+  static Future<bool> getBypassChina() async =>
+      (await _p()).getBool(keyBypassChina) ?? true;
 
-  static Future<void> setBlockedApps(List<String> v) async =>
-      (await _p()).setStringList(keyBlockedApps, v);
+  static Future<void> setBypassChina(bool v) async =>
+      (await _p()).setBool(keyBypassChina, v);
 
   /// 清用户缓存（退出登录时用，保留主题/节点选择）。
   static Future<void> clearCache() async {

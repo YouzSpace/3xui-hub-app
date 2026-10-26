@@ -14,7 +14,6 @@ import '../../features/plans/plans_routes.dart';
 import '../../features/settings/my_info_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/settings/settings_routes.dart';
-import '../../features/settings/split_tunnel_page.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/tutorials/tutorial_detail_page.dart';
 import '../../features/tutorials/tutorials_page.dart';
@@ -86,11 +85,6 @@ final GoRouter appRouter = GoRouter(
         return AppTransitions.slideFromRight(
             state: state, child: TutorialDetailPage(id: id));
       },
-    ),
-    GoRoute(
-      path: SettingsRoutes.splitTunnel,
-      pageBuilder: (context, state) => AppTransitions.slideFromRight(
-          state: state, child: const SplitTunnelPage()),
     ),
     GoRoute(
       path: SettingsRoutes.myInfo,
