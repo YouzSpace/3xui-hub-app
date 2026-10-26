@@ -5,34 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:controlhub_app/core/storage/prefs.dart';
 import 'package:controlhub_app/core/theme/app_theme.dart';
-import 'package:controlhub_app/data/models/user_profile.dart';
 import 'package:controlhub_app/features/settings/logout_service.dart';
 import 'package:controlhub_app/features/settings/settings_page.dart';
 import 'package:controlhub_app/features/settings/settings_providers.dart';
 import 'package:controlhub_app/features/settings/site_config.dart';
 import 'package:controlhub_app/features/settings/version_tap_trigger.dart';
 import 'package:controlhub_app/providers/theme_mode_provider.dart';
-
-UserProfile _user({String protocol = 'vless'}) => UserProfile(
-      id: 1,
-      email: 'a@b.com',
-      token: 'sub-token',
-      protocol: protocol,
-      planId: 2,
-      planType: 'period',
-      planName: '月付',
-      planIncludeLocal: true,
-      planMonths: 1,
-      planPrice: 19.9,
-      planResetPrice: 5,
-      trafficLimit: 0,
-      trafficUsed: 0,
-      monthlyTrafficUsed: 0,
-      monthlyTrafficLimit: 0,
-      nextTrafficResetAt: null,
-      expiredAt: null,
-      enabled: true,
-    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -196,7 +174,7 @@ void main() {
     });
   });
 
-  group('站点配置与协议切换入口', () {
+  group('站点配置', () {
     test('site-config 全字符串解析；非字符串值也兜成字符串', () {
       final config = SiteConfig.fromJson({
         'site_title': '柚子云',
@@ -216,28 +194,6 @@ void main() {
       expect(SiteConfig.decode(config.encode()).siteTitle, 'A');
       expect(SiteConfig.decode('not-json').isNotEmpty, isFalse);
       expect(SiteConfig.decode(null).isNotEmpty, isFalse);
-    });
-
-    test('vless/trojan 用户显示入口；站点开关为 "0" 时隐藏', () {
-      expect(supportsProtocolSwitch(_user(protocol: 'vless'), SiteConfig.empty), isTrue);
-      expect(supportsProtocolSwitch(_user(protocol: 'trojan'), SiteConfig.empty), isTrue);
-      // 未知协议（后端将来新增 vmess/ss）不提供切换。
-      expect(supportsProtocolSwitch(_user(protocol: 'vmess'), SiteConfig.empty), isFalse);
-      expect(supportsProtocolSwitch(null, SiteConfig.empty), isFalse);
-      expect(
-        supportsProtocolSwitch(
-          _user(),
-          const SiteConfig({'protocol_switch_enabled': '0'}),
-        ),
-        isFalse,
-      );
-    });
-
-    test('备选协议 = 当前协议之外的那一个', () {
-      expect(protocolAlternatives('vless'), ['trojan']);
-      expect(protocolAlternatives('trojan'), ['vless']);
-      expect(protocolLabel('vless'), 'VLESS');
-      expect(protocolLabel('trojan'), 'Trojan');
     });
   });
 
@@ -271,8 +227,6 @@ void main() {
       expect(find.text('套餐'), findsOneWidget);
       expect(find.text('意见反馈'), findsOneWidget);
       expect(find.text('退出登录'), findsOneWidget);
-      // 未登录（无 token）不显示协议切换。
-      expect(find.text('协议切换'), findsNothing);
     });
 
     testWidgets('连点版本号 5 次弹出隐藏地址入口', (tester) async {

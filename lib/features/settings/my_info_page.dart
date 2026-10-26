@@ -7,7 +7,6 @@ import '../../core/ui/state_views.dart';
 import '../../data/models/user_profile.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/copy_field.dart';
-import 'settings_providers.dart';
 
 /// 我的信息（T8.1 账号分组）：邮箱 / 订阅 token 可复制。
 ///
@@ -65,7 +64,6 @@ class MyInfoPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: Sp.lg),
-                _InfoRow(label: '当前协议', value: protocolLabel(profile.protocol)),
                 _InfoRow(label: '当前套餐', value: _planLabel(profile)),
               ],
             ),

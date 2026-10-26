@@ -13,7 +13,6 @@ import '../plans/plans_routes.dart';
 import '../shell/app_shell.dart';
 import 'hidden_api_base_sheet.dart';
 import 'logout_service.dart';
-import 'protocol_switch_tile.dart';
 import 'settings_providers.dart';
 import 'settings_routes.dart';
 import 'settings_tiles.dart';
@@ -45,19 +44,12 @@ class SettingsPage extends ConsumerWidget {
         ),
         children: [
           const SettingsSectionHeader('通用'),
-          SettingsGroup(
-            children: const [
-              _ThemeModeTile(),
-              _BypassChinaTile(),
-            ],
-          ),
+          SettingsGroup(children: const [_ThemeModeTile(), _BypassChinaTile()]),
           const SettingsSectionHeader('账号'),
           SettingsGroup(
             children: [
               _MyInfoTile(email: user?.email ?? ''),
               const _PlansTile(),
-              if (supportsProtocolSwitch(user, site))
-                ProtocolSwitchTile(current: user!.protocol),
             ],
           ),
           const SettingsSectionHeader('关于'),

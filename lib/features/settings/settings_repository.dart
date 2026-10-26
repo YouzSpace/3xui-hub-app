@@ -2,7 +2,7 @@ import '../../core/network/api_client.dart';
 import '../../core/storage/prefs.dart';
 import 'site_config.dart';
 
-/// 设置相关接口（T8.1）：站点配置 + 协议切换。
+/// 设置相关接口（T8.1）：站点配置。
 ///
 /// 铁律：网络请求只出现在仓库层，Widget 不碰 dio。
 class SettingsRepository {
@@ -22,21 +22,5 @@ class SettingsRepository {
       } catch (_) {}
     }
     return config;
-  }
-
-  /// POST /api/protocol `{protocol}`（system-design §3.10）。
-  ///
-  /// 返回切换后的协议（后端回 `{protocol}`），失败抛 ApiException 由调用方展示。
-  Future<String> switchProtocol(String protocol) async {
-    final data = await _client.request(
-      '/api/protocol',
-      method: 'POST',
-      data: {'protocol': protocol},
-    );
-    if (data is Map) {
-      final next = data['protocol'];
-      if (next is String && next.isNotEmpty) return next;
-    }
-    return protocol;
   }
 }

@@ -3,10 +3,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/storage/prefs.dart';
-import '../../data/models/user_profile.dart';
-import '../../vpn/vpn_controller.dart';
-import '../nodes/nodes_provider.dart';
-import '../../vpn/vpn_state.dart';
 import 'settings_repository.dart';
 import 'site_config.dart';
 
@@ -64,51 +60,7 @@ class LocalAppVersion {
       : 'v$versionName${buildNumber.isEmpty ? '' : ' ($buildNumber)'}';
 }
 
-/// 当前是否已连接（保存分应用代理后判断要不要提示「重新连接后生效」）。
-///
-/// 单独一层 Provider 便于 widget 测试直接 override 连接态，不必造 VPN 引擎。
-final vpnConnectedProvider = Provider<bool>((ref) {
-  return ref.watch(vpnProvider.select((s) => s.status == VpnStatus.connected));
-});
-
-/// 可切换的协议（后端 `POST /api/protocol` 只接受这两个值）。
-const List<String> kSwitchableProtocols = ['vless', 'trojan'];
-
-/// 协议显示名（后端返回小写）。
-String protocolLabel(String protocol) {
-  switch (protocol) {
-    case 'vless':
-      return 'VLESS';
-    case 'trojan':
-      return 'Trojan';
-    default:
-      return protocol.isEmpty ? '—' : protocol.toUpperCase();
-  }
-}
-
-/// 协议切换入口是否显示（system-design §3.10 / proposal F8）。
-///
-/// 后端目前**没有**「站点支持多协议」字段（`/api/site-config` 白名单里没有），
-/// 因此规则是：用户当前协议属于可切换集合（vless/trojan）就显示；
-/// 若站点将来下发 `protocol_switch_enabled == "0"` 则强制隐藏，给站点留关闭口。
-bool supportsProtocolSwitch(UserProfile? user, SiteConfig config) {
-  if (config.values['protocol_switch_enabled'] == '0') return false;
-  return kSwitchableProtocols.contains(user?.protocol ?? '');
-}
-
-/// 当前协议之外的可选项（切换弹层用）。
-List<String> protocolAlternatives(String current) =>
-    kSwitchableProtocols.where((p) => p != current).toList();
-
-/// 订阅重拉钩子（协议切换后调用）。
-///
-/// M3 的 `nodesProvider` 已落地，直接调它的 `refresh()`（重拉订阅正文 +
-/// 重新解析 + 对齐选中节点）；设置页只依赖这个 hook，不直接依赖 M3 的类。
-final subscriptionRefresherProvider = Provider<Future<void> Function()?>(
-  (ref) => () => ref.read(nodesProvider.notifier).refresh(),
-);
-
-/// 订阅缓存清理钩子（T8.4 第 4 步 / 协议切换后清缓存）。
+/// 订阅缓存清理钩子（T8.4 第 4 步）。
 ///
 /// 当前订阅相关持久化只有「选中节点」（`Prefs.keySelectedNode`），M3 落地后
 /// 若新增订阅正文缓存，override 本 Provider 把那些键一起删即可。

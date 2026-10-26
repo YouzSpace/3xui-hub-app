@@ -41,36 +41,39 @@ class _ThemeModeSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Sp.base, 0, Sp.base, Sp.sm),
-            child: Text('主题模式', style: Theme.of(context).textTheme.titleLarge),
-          ),
-          RadioGroup<ThemeMode>(
-            groupValue: current,
-            onChanged: (mode) {
-              if (mode == null) return;
-              ref.read(themeModeProvider.notifier).setMode(mode);
-              Navigator.of(context).pop();
-            },
-            child: Column(
-              children: [
-                for (final (mode, label, icon, hint) in _options)
-                  RadioListTile<ThemeMode>(
-                    value: mode,
-                    title: Text(label),
-                    subtitle: Text(
-                      hint,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                    secondary: Icon(icon, color: cs.onSurfaceVariant),
-                  ),
-              ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.base, 0, Sp.base, Sp.sm),
+              child: Text(
+                '主题模式',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
-          ),
-          const SizedBox(height: Sp.base),
-        ],
-      ),
+            RadioGroup<ThemeMode>(
+              groupValue: current,
+              onChanged: (mode) {
+                if (mode == null) return;
+                ref.read(themeModeProvider.notifier).setMode(mode);
+                Navigator.of(context).pop();
+              },
+              child: Column(
+                children: [
+                  for (final (mode, label, icon, hint) in _options)
+                    RadioListTile<ThemeMode>(
+                      value: mode,
+                      title: Text(label),
+                      subtitle: Text(
+                        hint,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      secondary: Icon(icon, color: cs.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Sp.base),
+          ],
+        ),
       ),
     );
   }
