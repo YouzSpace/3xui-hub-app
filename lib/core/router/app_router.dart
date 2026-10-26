@@ -36,6 +36,11 @@ final GoRouter appRouter = GoRouter(
     final loggingIn = state.matchedLocation == '/login';
     if (!loggedIn && !loggingIn) return '/login';
     if (loggedIn && loggingIn) return '/home';
+    // 无套餐不显示节点 tab，也禁止深链直达 /nodes（user 未加载时不拦截）。
+    final user = providerContainer.read(userProvider).valueOrNull;
+    if (user != null && user.planId == 0 && state.matchedLocation == '/nodes') {
+      return '/home';
+    }
     return null;
   },
   refreshListenable: _TokenListenable(providerContainer),

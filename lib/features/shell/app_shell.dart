@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/spacing.dart';
 import '../../core/ui/glass_surface.dart';
 import '../../core/ui/motion.dart';
+import '../../providers/auth_providers.dart';
 
-/// 主壳（T1.10）：5 tab 底部导航，StatefulShellRoute.indexedStack
+/// 主壳（T1.10）：底部导航，StatefulShellRoute.indexedStack
 /// 保留各 tab 状态（切回来不重建、不丢滚动位置）。
 ///
 /// 底栏用 GlassSurface（玻璃白名单唯一常驻位置），
 /// 选中态 secondaryContainer 胶囊。
-class AppShell extends StatelessWidget {
+///
+/// branch 顺序固定：0=home、1=nodes、2=settings；
+/// 无套餐（planId==0）时不显示「节点」tab，只留首页 / 我的。
+class AppShell extends ConsumerWidget {
   final StatefulNavigationShell shell;
 
   const AppShell({super.key, required this.shell});
 
-  static const _tabs = [
-    ('首页', Icons.home_outlined, '/home'),
-    ('节点', Icons.dns_outlined, '/nodes'),
-    ('我的', Icons.person_outline, '/settings'),
-  ];
+  /// 每个 tab 带它对应的 branch index（tab 可能被套餐状态裁剪，
+  /// 不能用列表下标当 branch index）。
+  static List<(String, IconData, String, int)> _tabs(bool hasPlan) => [
+        ('首页', Icons.home_outlined, '/home', 0),
+        if (hasPlan) ('节点', Icons.dns_outlined, '/nodes', 1),
+        ('我的', Icons.person_outline, '/settings', 2),
+      ];
 
-  void _onTap(int index) {
+  void _onTap(int branchIndex) {
     shell.goBranch(
-      index,
+      branchIndex,
       // 再点当前 tab 回到该分支根部；其他分支保留栈。
-      initialLocation: index == shell.currentIndex,
+      initialLocation: branchIndex == shell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider).valueOrNull;
+    final hasPlan = user != null && user.planId > 0;
+    final tabs = _tabs(hasPlan);
+
     return Scaffold(
       body: shell,
       // 底栏浮在内容上（body 不加 bottom padding，让内容从玻璃下穿过）。
@@ -45,12 +56,13 @@ class AppShell extends StatelessWidget {
               height: 72,
               child: Row(
                 children: [
-                  for (var i = 0; i < _tabs.length; i++)
+                  for (final (label, icon, _, branchIndex) in tabs)
                     Expanded(
                       child: _NavTab(
-                        tab: _tabs[i],
-                        selected: i == shell.currentIndex,
-                        onTap: () => _onTap(i),
+                        label: label,
+                        icon: icon,
+                        selected: branchIndex == shell.currentIndex,
+                        onTap: () => _onTap(branchIndex),
                       ),
                     ),
                 ],
@@ -65,12 +77,14 @@ class AppShell extends StatelessWidget {
 
 /// 单个 tab：选中态 secondaryContainer 胶囊（64×32，design-tokens §4）。
 class _NavTab extends StatelessWidget {
-  final (String, IconData, String) tab;
+  final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
   const _NavTab({
-    required this.tab,
+    required this.label,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
@@ -78,7 +92,6 @@ class _NavTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final (label, icon, _) = tab;
     return Semantics(
       selected: selected,
       button: true,
