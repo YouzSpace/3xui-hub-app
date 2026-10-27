@@ -162,6 +162,7 @@ class FlutterVlessEngine implements VpnEngine {
       remark: remark,
       config: config,
       proxyOnly: false,
+      notificationDisconnectButtonName: '断开',
     );
   }
 

@@ -69,6 +69,12 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.8
 
+# fork 本地 flutter_vless_android：改通知为中文 + 实时上传下载速度（见 third_party/）。
+# 升级 flutter_vless 主包时，需手动同步 fork 里 XrayVPNService.kt 的通知改动。
+dependency_overrides:
+  flutter_vless_android:
+    path: third_party/flutter_vless_android
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
