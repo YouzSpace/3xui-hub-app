@@ -271,6 +271,21 @@ void main() {
       expect(nodes[1].latencyMs, 66);
     });
 
+    test('measureAll 测完按延迟升序排序（未测/失败的排最后）', () async {
+      repo.nodes = [_node('HK'), _node('JP'), _node('US')];
+      final container = makeContainer();
+      await container.read(nodesProvider.future);
+
+      engine.latency[repo.nodes[0].raw] = 300; // HK 慢
+      engine.latency[repo.nodes[1].raw] = 50; // JP 快
+      // US 未测（null），应排最后
+      await container.read(nodesProvider.notifier).measureAll();
+
+      final nodes = container.read(nodesProvider).value!;
+      expect(nodes.map((n) => n.name).toList(), ['JP', 'HK', 'US']);
+      expect(nodes.map((n) => n.latencyMs).toList(), [50, 300, null]);
+    });
+
     test('测速结果落盘，冷启动（新容器）从 prefs 回填', () async {
       repo.nodes = [_node('HK'), _node('JP')];
       final container = makeContainer();

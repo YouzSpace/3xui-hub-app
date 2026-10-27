@@ -96,6 +96,9 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
     if (nodes == null || nodes.isEmpty) return;
     await _measure(nodes);
 
+    // 测完按延迟升序重排（快的在前，未测/失败的排最后）。
+    _sortByLatency();
+
     // 自动选择开启时，测完立刻切到最快的那个。
     if (ref.read(autoSelectFastestProvider)) {
       final fastest = _fastest(state.valueOrNull ?? const []);
@@ -185,6 +188,21 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
     } catch (_) {
       return const {};
     }
+  }
+
+  /// 测完后按延迟升序重排列表（快的在前，未测/失败的 null 排最后）。
+  void _sortByLatency() {
+    final current = state.valueOrNull;
+    if (current == null || current.length < 2) return;
+    final sorted = [...current]..sort((a, b) {
+        final am = a.latencyMs;
+        final bm = b.latencyMs;
+        if (am == null && bm == null) return 0;
+        if (am == null) return 1;
+        if (bm == null) return -1;
+        return am.compareTo(bm);
+      });
+    state = AsyncData(sorted);
   }
 
   static Node? _fastest(List<Node> nodes) {
