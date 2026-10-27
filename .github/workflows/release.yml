@@ -47,7 +47,9 @@ jobs:
           echo "=== curl ==="
           curl -sI --max-time 10 https://plugins.gradle.org/m2/ 2>&1 | head -1
           echo "=== Java DNS ==="
-          printf 'import java.net.*;\nSystem.out.println(java.util.Arrays.toString(InetAddress.getAllByName("plugins.gradle.org")));\n/exit\n' | jshell -s - 2>&1 | tail -4
+          printf 'import java.net.*;\nSystem.out.println(java.util.Arrays.toString(InetAddress.getAllByName("plugins.gradle.org")));\n/exit\n' | jshell -s - 2>&1 | tail -3
+          echo "=== Java HTTP 连接 ==="
+          printf 'import java.net.*;\nvar c = (HttpURLConnection) new URL("https://plugins.gradle.org/m2/").openConnection();\nc.setConnectTimeout(8000); c.setReadTimeout(8000);\ntry { System.out.println("HTTP " + c.getResponseCode()); } catch (Exception e) { System.out.println("ERR " + e.toString()); }\n/exit\n' | jshell -s - 2>&1 | tail -5
 
       - name: 预下载 Gradle 到 wrapper 缓存（避免 wrapper 下载 307/302 重定向失败）
         run: |
