@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/spacing.dart';
 import '../announcements/site_content_providers.dart';
 import 'feedback_launcher.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 设置页「意见反馈」行（T7.4）。
 ///
@@ -48,8 +49,6 @@ class FeedbackEntry extends ConsumerWidget {
   Future<void> _onTap(BuildContext context, String link) async {
     final ok = await openFeedbackLink(link);
     if (ok || !context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('无法打开链接')));
+    showAppToast(context, '无法打开链接');
   }
 }

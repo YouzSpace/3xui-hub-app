@@ -12,6 +12,7 @@ import 'buy_sheet.dart';
 import 'plan_card.dart';
 import 'plans_provider.dart';
 import 'plans_routes.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 套餐页（T6.3）：AppBar「套餐」+ 右侧订单记录入口，列表为 PlanCard。
 ///
@@ -121,9 +122,7 @@ class PlansPage extends ConsumerWidget {
   }
 
   void _toast(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message);
   }
 }
 

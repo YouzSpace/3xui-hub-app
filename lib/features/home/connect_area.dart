@@ -10,6 +10,7 @@ import '../../vpn/vpn_state.dart';
 import '../../widgets/connect_button.dart';
 import '../nodes/nodes_provider.dart';
 import 'home_providers.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 连接区（T5.1 ②）：120dp 按钮 + 状态文字（titleMedium）+ 时长/延迟（bodySmall）。
 class ConnectArea extends ConsumerWidget {
@@ -120,7 +121,5 @@ String? _metaLine(VpnState vpn) {
 
 /// 首页通用提示（连接失败 / 禁用原因 / 状态联动）。
 void showHomeSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  showAppToast(context, message);
 }

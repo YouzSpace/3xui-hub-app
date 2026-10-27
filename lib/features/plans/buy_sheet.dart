@@ -11,6 +11,7 @@ import '../../data/models/order.dart';
 import '../../data/models/pay_method.dart';
 import '../../data/models/plan.dart';
 import 'plans_provider.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 购买弹层（T6.3）：选支付方式（RadioListTile）+ 优惠码（含「验证」）+
 /// 最终金额 + 「去支付」→ `createOrder` → 跳支付页。
@@ -127,9 +128,7 @@ class _BuySheetState extends ConsumerState<BuySheet> {
     } on ApiException catch (e) {
       if (!mounted) return;
       // 429 / 400（套餐下架、折后不足 1 元…）后端 msg 已可直接展示。
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(e.message)));
+      showAppToast(context, e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

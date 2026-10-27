@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/theme/spacing.dart';
+import '../../core/ui/app_toast.dart';
 import '../../core/ui/motion.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_providers.dart';
@@ -49,9 +50,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(sessionExpiredProvider.notifier).state = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登录已过期，请重新登录')),
-      );
+      showAppToast(context, '登录已过期，请重新登录');
     });
   }
 
@@ -86,9 +85,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (err.code == 429) {
       _startCooldown();
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(err.message)),
-    );
+    showAppToast(context, err.message);
   }
 
   /// 429：按钮禁用 60 秒倒计时（T2.4）。

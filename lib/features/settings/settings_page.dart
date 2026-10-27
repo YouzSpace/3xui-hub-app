@@ -23,6 +23,7 @@ import 'settings_tiles.dart';
 import 'site_config.dart';
 import 'theme_mode_sheet.dart';
 import 'version_tap_trigger.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 设置页（T8.1）：通用 / 账号 / 关于 三个分组 + 红色退出登录。
 ///
@@ -87,12 +88,9 @@ class SettingsPage extends ConsumerWidget {
 
   /// 反馈外链：外部浏览器/对应 App 打开（T7.4），打不开只提示不崩。
   Future<void> _openFeedback(BuildContext context, String link) async {
-    final messenger = ScaffoldMessenger.of(context);
     final ok = await openFeedbackLink(link);
-    if (!ok) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('无法打开链接')));
+    if (!ok && context.mounted) {
+      showAppToast(context, '无法打开链接');
     }
   }
 }
@@ -237,9 +235,7 @@ class _VersionTile extends ConsumerWidget {
   Future<void> _openHiddenEntry(BuildContext context, WidgetRef ref) async {
     final changed = await showHiddenApiBaseDialog(context);
     if (!changed || !context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('地址已保存，重启后生效')));
+    showAppToast(context, '地址已保存，重启后生效');
   }
 }
 
@@ -281,11 +277,8 @@ class _CheckUpdateTileState extends ConsumerState<_CheckUpdateTile> {
     if (!mounted) return;
     setState(() => _checking = false);
 
-    final messenger = ScaffoldMessenger.of(context);
     if (decision == null) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('已是最新版本')));
+      showAppToast(context, '已是最新版本');
       return;
     }
     // 有更新：直接弹更新框（force / optional 都由弹窗自己处理形态）。

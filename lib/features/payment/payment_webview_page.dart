@@ -12,6 +12,7 @@ import '../plans/plans_provider.dart';
 import '../plans/plans_routes.dart';
 import 'pay_url_policy.dart';
 import 'payment_poller.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 支付页入参。
 class PaymentPageArgs {
@@ -207,9 +208,7 @@ class _PaymentWebviewPageState extends ConsumerState<PaymentWebviewPage> {
     if (!mounted) return;
     if (!launched) {
       // 调起失败：保持 WebView，提示用户换其他支付方式。
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('未安装对应支付应用，请尝试其他支付方式')),
-      );
+      showAppToast(context, '未安装对应支付应用，请尝试其他支付方式');
       return;
     }
     // 调起成功：进入轮询，等用户完成支付回到本 App 后确认到账。
@@ -288,24 +287,18 @@ class _PaymentWebviewPageState extends ConsumerState<PaymentWebviewPage> {
         await ref.read(userProvider.notifier).refresh();
         ref.invalidate(plansProvider);
         ref.invalidate(ordersProvider);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('支付成功，套餐已到账')));
+        showAppToastWith(messenger, '支付成功，套餐已到账');
         router.go('/home');
       case PaymentOutcome.timeout:
         ref.invalidate(ordersProvider);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(content: Text('支付结果确认中，可在订单记录查看')),
-          );
+        showAppToastWith(messenger, '支付结果确认中，可在订单记录查看');
         // 直接落到订单记录（订单页 AppBar 有返回首页的口子）。
         router.go(PlansRoutes.orders);
       case PaymentOutcome.closed:
         ref.invalidate(ordersProvider);
         if (!mounted) {
           // 页面已被返回键关掉：用一个提示告诉用户「这单不用再等了」。
-          messenger.showSnackBar(const SnackBar(content: Text('订单已关闭')));
+          showAppToastWith(messenger, '订单已关闭');
           return;
         }
         final reorder = await _showClosedDialog();

@@ -11,6 +11,7 @@ import '../shell/app_shell.dart';
 import 'node_tile.dart';
 import 'nodes_empty_view.dart';
 import 'nodes_provider.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 节点列表页（T3.5）。
 ///
@@ -103,9 +104,7 @@ class NodesPage extends ConsumerWidget {
               ? (state.error as ApiException).message
               : '订阅获取失败，请稍后重试')
         : '已更新 ${state.valueOrNull?.length ?? 0} 个节点';
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message);
   }
 }
 
@@ -221,9 +220,7 @@ class _NodeList extends ConsumerWidget {
   }
 
   void _toast(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message);
   }
 }
 

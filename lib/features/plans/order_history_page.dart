@@ -11,6 +11,7 @@ import '../payment/payment_poller.dart';
 import '../payment/payment_webview_page.dart';
 import 'plans_provider.dart';
 import 'plans_routes.dart';
+import '../../core/ui/app_toast.dart';
 
 /// 订单记录（T6.6）。
 ///
@@ -98,9 +99,7 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       // 410「支付链接已失效，请返回商城重新下单」已由后端给出可直接展示的文案。
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(e.message)));
+      showAppToast(context, e.message);
       // 410 时后端已把该单作废，重新拉一次列表让状态跟着变。
       ref.invalidate(ordersProvider);
     } finally {
@@ -219,9 +218,7 @@ class _OrderTile extends StatelessWidget {
   Future<void> _copyOrderNo(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: order.orderNo));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('订单号已复制')));
+    showAppToast(context, '订单号已复制');
   }
 
   /// `2026-10-26 14:05`；时间为 null 时 `—`。

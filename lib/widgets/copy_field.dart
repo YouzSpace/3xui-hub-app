@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../core/theme/spacing.dart';
 import '../core/ui/motion.dart';
+import '../core/ui/app_toast.dart';
 
 /// 可复制字段（T1.7）：文本 + 复制按钮，复制成功 SnackBar 提示、
 /// 图标短暂变勾后恢复（ui-glass-motion §3.2 #9：200ms morph，2s 后恢复）。
@@ -30,9 +31,7 @@ class _CopyFieldState extends State<CopyField> {
     await Clipboard.setData(ClipboardData(text: widget.value));
     if (!mounted) return;
     setState(() => _copied = true);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(widget.copiedHint)));
+    showAppToast(context, widget.copiedHint);
     // 2s 后恢复复制图标（§3.2 #9，周期取 Motion.copyReset）。
     await Future<void>.delayed(Motion.copyReset);
     if (mounted) setState(() => _copied = false);
