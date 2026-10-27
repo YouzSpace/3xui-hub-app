@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/splash_screen.dart';
@@ -23,7 +24,9 @@ class _ControlHubAppState extends ConsumerState<ControlHubApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'ControlHub',
+      // 最近任务卡片（手机后台任务列表）显示的名字：白标品牌名 >
+      // 编译默认名。真正的 App 内标题走站点配置，不走这里。
+      title: AppConfig.appName.isEmpty ? 'ControlHub' : AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

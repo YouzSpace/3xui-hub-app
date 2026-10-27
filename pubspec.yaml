@@ -94,6 +94,8 @@ flutter:
     - assets/pay/ali_pay.png
     # 服务器地址配置（客户用 MT 管理器改这个 txt 即可换服务器）。
     - assets/config/api_base.txt
+    # 品牌名配置（客户白标用；留空则用后台站点名）。
+    - assets/config/app_name.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

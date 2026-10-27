@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/config/api_config.dart';
+import 'core/config/app_config.dart';
 import 'providers/auth_providers.dart';
 import 'vpn/bypass_china.dart';
 import 'vpn/vpn_controller.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     await Future.wait([
       ApiConfig.loadOverride(),
       ApiConfig.loadAssetsBase(),
+      AppConfig.loadAppName(),
       initTokenState(),
     ]);
   } catch (_) {
