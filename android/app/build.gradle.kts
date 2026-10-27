@@ -73,6 +73,18 @@ android {
     }
 }
 
+// 只对 release 排除非 arm64 的 native 库（APK 从 83MB 降到 32MB）。
+// debug 保留全架构：本地模拟器是 x86_64，排除会连不了 VPN。
+// AAR 依赖的 prebuilt .so 不受 ndk.abiFilters 控制，只能用 packaging excludes。
+// 客户要兼容老 32 位手机（armeabi-v7a）时删掉这段。
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes.addAll(
+            listOf("lib/armeabi-v7a/**", "lib/x86_64/**", "lib/x86/**")
+        )
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
