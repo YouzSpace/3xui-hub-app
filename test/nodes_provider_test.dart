@@ -286,6 +286,23 @@ void main() {
       expect(nodes.map((n) => n.latencyMs).toList(), [50, 300, null]);
     });
 
+    test('measureAll 排序：超时（-1）节点排最后，不参与选最快', () async {
+      repo.nodes = [_node('HK'), _node('JP'), _node('US')];
+      final container = makeContainer();
+      await container.read(nodesProvider.future);
+
+      engine.latency[repo.nodes[0].raw] = 300; // HK 慢
+      engine.latency[repo.nodes[1].raw] = 50; // JP 快
+      engine.latency[repo.nodes[2].raw] = -1; // US 超时
+      await container.read(nodesProvider.notifier).measureAll();
+
+      final nodes = container.read(nodesProvider).value!;
+      expect(nodes.map((n) => n.name).toList(), ['JP', 'HK', 'US']);
+      expect(nodes.map((n) => n.latencyMs).toList(), [50, 300, -1]);
+      // 自动选择开启时，超时节点不会当选。
+      expect(container.read(selectedNodeProvider)?.name, 'JP');
+    });
+
     test('测速结果落盘，冷启动（新容器）从 prefs 回填', () async {
       repo.nodes = [_node('HK'), _node('JP')];
       final container = makeContainer();

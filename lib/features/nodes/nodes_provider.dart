@@ -167,12 +167,13 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
   }
 
   /// 测完一批后把延迟结果落盘（raw → ms），冷启动回填用。
+  /// 超时（-1）不落盘：失败的结果缓存没有意义，下次冷启动当未测重测。
   Future<void> _persistLatency() async {
     final nodes = state.valueOrNull;
     if (nodes == null) return;
     final map = <String, int>{
       for (final n in nodes)
-        if (n.latencyMs != null) n.raw: n.latencyMs!,
+        if (n.latencyMs != null && n.latencyMs! >= 0) n.raw: n.latencyMs!,
     };
     try {
       await Prefs.setNodeLatency(map);
@@ -190,17 +191,18 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
     }
   }
 
-  /// 测完后按延迟升序重排列表（快的在前，未测/失败的 null 排最后）。
+  /// 测完后按延迟升序重排列表（快的在前，未测/超时的排最后）。
   void _sortByLatency() {
     final current = state.valueOrNull;
     if (current == null || current.length < 2) return;
+    bool valid(int? ms) => ms != null && ms >= 0;
     final sorted = [...current]..sort((a, b) {
-        final am = a.latencyMs;
-        final bm = b.latencyMs;
-        if (am == null && bm == null) return 0;
-        if (am == null) return 1;
-        if (bm == null) return -1;
-        return am.compareTo(bm);
+        final av = valid(a.latencyMs);
+        final bv = valid(b.latencyMs);
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
+        return a.latencyMs!.compareTo(b.latencyMs!);
       });
     state = AsyncData(sorted);
   }
@@ -209,7 +211,7 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
     Node? best;
     for (final n in nodes) {
       final ms = n.latencyMs;
-      if (ms == null) continue;
+      if (ms == null || ms < 0) continue;
       if (best == null || ms < (best.latencyMs ?? 1 << 30)) best = n;
     }
     return best;

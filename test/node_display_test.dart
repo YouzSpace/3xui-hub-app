@@ -44,14 +44,16 @@ void main() {
       expect(displayNodeSubtitle(_node('x')), 'VLESS · hk.example.com:443');
     });
 
-    test('延迟文案：未测速 —，已测速带单位', () {
+    test('延迟文案：未测速 —，超时显示超时，已测速带单位', () {
       expect(latencyLabel(null), '—');
+      expect(latencyLabel(-1), '超时');
       expect(latencyLabel(0), '0 ms');
       expect(latencyLabel(123), '123 ms');
     });
 
     test('延迟无障碍文案分档', () {
       expect(latencySemantics(null), '未测速');
+      expect(latencySemantics(-1), '测速超时');
       expect(latencySemantics(50), contains('良好'));
       expect(latencySemantics(150), contains('一般'));
       expect(latencySemantics(300), contains('较差'));

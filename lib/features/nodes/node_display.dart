@@ -42,24 +42,28 @@ String displayNodeName(Node node) {
 String displayNodeSubtitle(Node node) =>
     '${node.protocol.toUpperCase()} · ${node.address}';
 
-/// 延迟徽章文案：未测速 `—`，否则 `123 ms`。
-String latencyLabel(int? latencyMs) =>
-    latencyMs == null ? '—' : '$latencyMs ms';
+/// 延迟徽章文案：未测速 `—`，测速超时 `超时`，否则 `123 ms`。
+String latencyLabel(int? latencyMs) {
+  if (latencyMs == null) return '—';
+  if (latencyMs < 0) return '超时';
+  return '$latencyMs ms';
+}
 
 /// 延迟档位文案（无障碍朗读 / Tooltip 用）。
 String latencySemantics(int? latencyMs) {
   if (latencyMs == null) return '未测速';
+  if (latencyMs < 0) return '测速超时';
   if (latencyMs < 100) return '延迟 $latencyMs 毫秒，良好';
   if (latencyMs < 200) return '延迟 $latencyMs 毫秒，一般';
   return '延迟 $latencyMs 毫秒，较差';
 }
 
-/// 延迟徽章颜色：<100 绿 / <200 橙 / 其他红 / 未测速 onSurfaceVariant。
+/// 延迟徽章颜色：<100 绿 / <200 橙 / 其他红 / 未测或超时 onSurfaceVariant。
 ///
 /// 绿/橙取 design-tokens §1.4 的连接状态色（不占 M3 角色），红用 `error`。
 Color latencyColor(BuildContext context, int? latencyMs) {
   final cs = Theme.of(context).colorScheme;
-  if (latencyMs == null) return cs.onSurfaceVariant;
+  if (latencyMs == null || latencyMs < 0) return cs.onSurfaceVariant;
   final dark = Theme.of(context).brightness == Brightness.dark;
   if (latencyMs < 100) {
     return dark ? AppTheme.connectedDark : AppTheme.connectedLight;

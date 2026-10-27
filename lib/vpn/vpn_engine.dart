@@ -184,8 +184,9 @@ class FlutterVlessEngine implements VpnEngine {
             await _probeServerDelay(config, _delayProbeUrl2);
       }
       // TCP 握手测速：直连节点测物理延迟（快、数值低，对齐 v2rayNG tcping）。
+      // 握手失败返回 -1（「超时」），与 null「未测/解析失败」区分开。
       final ms = await _tcpProbe(parsed.address, parsed.port);
-      return ms < 0 ? null : ms;
+      return ms;
     } catch (_) {
       return null;
     }

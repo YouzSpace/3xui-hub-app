@@ -178,9 +178,9 @@ void main() {
     expect(fake.serverDelayCalls, 0, reason: 'TCP 握手测速不起 xray 进程');
   });
 
-  test('measureDelay：握手失败（-1）→ null，不起内核', () async {
+  test('measureDelay：握手失败（-1）→ 返回 -1（超时），不起内核', () async {
     final unreachable = FlutterVlessEngine(tcpProbe: (_, _) async => -1);
-    expect(await unreachable.measureDelay(_validLink), isNull);
+    expect(await unreachable.measureDelay(_validLink), -1);
     expect(fake.serverDelayCalls, 0);
   });
 
