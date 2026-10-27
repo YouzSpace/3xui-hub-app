@@ -106,8 +106,8 @@ class FlutterVlessEngine implements VpnEngine {
   Future<void> initialize() async {
     if (_initialized) return;
     await _vless.initializeVless(
-      notificationIconResourceType: 'mipmap',
-      notificationIconResourceName: 'ic_launcher',
+      notificationIconResourceType: 'drawable',
+      notificationIconResourceName: 'ic_notification',
       providerBundleIdentifier: providerBundleIdentifier,
       groupIdentifier: '',
     );
