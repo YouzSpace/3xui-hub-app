@@ -1,7 +1,15 @@
 name: Release APK
 
 # 打 tag（v*）或手动触发时，在 CI 上编译 release APK（正式签名）并发布到 GitHub Release。
-# 签名 keystore 与密码存 GitHub secrets，CI 里解码落盘后用环境变量喂给 Gradle。
+# 签名 keystore 与密码存 GitHub secrets，CI 里解码落盘 + 生成 key.properties，跟本机同一套读取路径。
+#
+# 两条硬规则（v1.0.0/v1.0.1 的 Release 都败在这）：
+#   1. 仓库里的 android/gradle.properties 绝不能写代理——CI runner 上没有本机 FlClash。
+#   2. keystore 路径不要用环境变量传 "android/app/x.jks"：Gradle 的 file() 在 app 模块内解析，
+#      会变成 android/app/android/app/x.jks。走 key.properties（storeFile 相对 app 模块）。
+#
+# 构建流程照 FlClash（chen08209/FlClash）的成熟做法：官方 gradle/actions/setup-gradle 管缓存，
+# Gradle wrapper 用 Flutter SDK 自带的，不手写 wrapper/dists 硬编码路径。
 
 on:
   push:
@@ -12,14 +20,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
-    env:
-      # CI 上 Java 访问 Gradle 域名常 Connection refused（curl 正常），强制 IPv4 并关系统代理。
-      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true -Djava.net.useSystemProxies=false"
-      GRADLE_OPTS: "-Djava.net.preferIPv4Stack=true -Djava.net.useSystemProxies=false"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,69 +45,43 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # Flutter 模板的 .gitignore 忽略 gradle-wrapper.jar，用 SDK 自带的补上，省一次下载。
+      - name: 补 Gradle wrapper（用 Flutter SDK 自带的）
+        run: |
+          wrapper="$FLUTTER_ROOT/bin/cache/artifacts/gradle_wrapper"
+          test -d "$wrapper" || flutter precache
+          cp -R "$wrapper/." android/
+          chmod +x android/gradlew
+          ls -l android/gradle/wrapper/
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
       - name: 拉依赖
         run: flutter pub get
 
-      - name: 诊断 Java vs curl 网络
-        run: |
-          echo "=== 代理变量 ==="
-          env | grep -i proxy || echo "无代理变量"
-          echo "=== curl ==="
-          curl -sI --max-time 10 https://plugins.gradle.org/m2/ 2>&1 | head -1
-          echo "=== Java DNS ==="
-          printf 'import java.net.*;\nSystem.out.println(java.util.Arrays.toString(InetAddress.getAllByName("plugins.gradle.org")));\n/exit\n' | jshell -s - 2>&1 | tail -3
-          echo "=== Java HTTP 连接 ==="
-          printf 'import java.net.*;\nvar c = (HttpURLConnection) new URL("https://plugins.gradle.org/m2/").openConnection();\nc.setConnectTimeout(8000); c.setReadTimeout(8000);\ntry { System.out.println("HTTP " + c.getResponseCode()); } catch (Exception e) { System.out.println("ERR " + e.toString()); }\n/exit\n' | jshell -s - 2>&1 | tail -5
-
-      - name: 预下载 Gradle 到 wrapper 缓存（避免 wrapper 下载 307/302 重定向失败）
-        run: |
-          DIST_DIR="$HOME/.gradle/wrapper/dists/gradle-9.3.1-all/9ot9r568e8zfvvd4mn8rbu1j0"
-          mkdir -p "$DIST_DIR"
-          curl -fL -o "$DIST_DIR/gradle-9.3.1-all.zip" "https://services.gradle.org/distributions/gradle-9.3.1-all.zip"
-          unzip -q "$DIST_DIR/gradle-9.3.1-all.zip" -d "$DIST_DIR"
-          touch "$DIST_DIR/gradle-9.3.1-all.zip.ok"
-
-      - name: 解码签名 keystore
+      - name: 写入签名配置（与本机 key.properties 同一套）
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/controlhub-app.jks
-
-      - name: 提取版本号（tag 去 v 前缀）
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: 给 Flutter 自带 gradle 构建补插件镜像（CI 访问 plugins.gradle.org 会被拒）
-        run: |
-          F="$(dirname "$(dirname "$(readlink -f "$(which flutter)")")")/packages/flutter_tools/gradle/settings.gradle.kts"
-          echo "目标: $F"
-          python3 - "$F" <<'PY'
-          import sys
-          p = sys.argv[1]
-          s = open(p).read()
-          if 'pluginManagement' in s:
-              print('已有 pluginManagement，跳过')
-          else:
-              head = '''pluginManagement {
-              repositories {
-                  // CI 访问 plugins.gradle.org 被拒（v1.0.0 就败在这），改走阿里云镜像。
-                  maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-                  gradlePluginPortal()
-              }
-          }
-
-          '''
-              open(p, 'w').write(head + s)
-              print('已补 pluginManagement')
-          PY
-          head -20 "$F"
-
-      - name: 构建 release APK（正式签名）
-        env:
-          KEYSTORE_PATH: android/app/controlhub-app.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::签名 secrets 缺失（KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD）"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/controlhub-app.jks
+          test -s android/app/controlhub-app.jks || { echo "::error::keystore 解码为空"; exit 1; }
+          {
+            echo "storeFile=controlhub-app.jks"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/app/key.properties
+          ls -l android/app/controlhub-app.jks android/app/key.properties
+
+      - name: 构建 release APK（正式签名）
         run: flutter build apk --release
 
       - name: 发布 Release
