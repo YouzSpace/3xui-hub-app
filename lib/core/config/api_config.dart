@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 服务器地址配置（T9.1 / system-design §10）。
 ///
-/// 域名只允许出现在这一个文件里（grep 卡）。换站点 = 改 defaultValue 一行，
-/// 或构建时 `--dart-define=API_BASE=https://客户域名`。
+/// 地址来源优先级（见 [ApiConfig.base]）：
+///   1. 隐藏入口 override（prefs，测试/联调用，普通用户不碰）
+///   2. assets/config/api_base.txt（客户用 MT 管理器改这个文件换服务器）
+///   3. 编译常量 [kDefaultApiBase]（--dart-define=API_BASE 或 defaultValue，兜底）
 const String kDefaultApiBase = String.fromEnvironment(
   'API_BASE',
   defaultValue: 'https://wujiecloud.top',
@@ -12,18 +15,35 @@ const String kDefaultApiBase = String.fromEnvironment(
 
 class ApiConfig {
   static const String _overrideKey = 'api_base_override';
+  static const String _assetPath = 'assets/config/api_base.txt';
 
   /// 隐藏入口写入的临时覆盖值（测试/联调用，普通用户不会碰）。
   static String? _override;
 
+  /// assets 配置文件里的地址（客户用 MT 管理器改 api_base.txt 换服务器）。
+  static String? _assetsBase;
+
+  /// 优先级：隐藏入口 override > assets 配置 > 编译常量。
   /// 使用时永远走这里，不要直接读 kDefaultApiBase。
-  static String get base => _override ?? kDefaultApiBase;
+  static String get base => _override ?? _assetsBase ?? kDefaultApiBase;
 
   /// 启动时从 prefs 读 override（通常在 main() 里最先调用）。
   static Future<void> loadOverride() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_overrideKey);
     _override = (v == null || v.isEmpty) ? null : v;
+  }
+
+  /// 启动时读 assets/config/api_base.txt（客户换服务器只改这个文件）。
+  static Future<void> loadAssetsBase() async {
+    try {
+      final s = await rootBundle.loadString(_assetPath);
+      final v = s.trim();
+      _assetsBase = v.isEmpty ? null : v;
+    } catch (_) {
+      // 读不到（打包漏了 / 被删）退回编译常量。
+      _assetsBase = null;
+    }
   }
 
   /// 写入 override；传 null 或空串恢复内置地址。

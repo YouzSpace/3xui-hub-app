@@ -32,4 +32,11 @@ void main() {
     final ok = await ApiConfig.validate('http://127.0.0.1:1');
     expect(ok, false);
   });
+
+  testWidgets('loadAssetsBase 读到 assets/config/api_base.txt', (tester) async {
+    await ApiConfig.loadAssetsBase();
+    // 打包的 api_base.txt 内容非空且是 https 地址（MT 管理器改这个文件换服务器）。
+    expect(ApiConfig.base, isNotEmpty);
+    expect(ApiConfig.base, startsWith('https://'));
+  });
 }

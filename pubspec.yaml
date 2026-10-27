@@ -92,6 +92,8 @@ flutter:
     # 支付方式图标（微信 / 支付宝）。
     - assets/pay/wx_pay.png
     - assets/pay/ali_pay.png
+    # 服务器地址配置（客户用 MT 管理器改这个 txt 即可换服务器）。
+    - assets/config/api_base.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

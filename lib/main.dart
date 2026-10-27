@@ -13,10 +13,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 隐藏入口存的地址覆盖（通常为空 → 用编译常量），必须在 runApp 前完成，
   // 保证首个请求就拿到的最终值。
-  // 两个启动读操作并行：地址覆盖（SharedPreferences）+ token 回填（secure storage）
-  // 互不依赖，串行会白白多等一轮存储 I/O。任一失败都不阻塞启动。
+  // 启动读操作并行：地址覆盖（prefs）+ assets 地址 + token 回填（secure storage）
+  // 互不依赖，串行会白白多等存储 I/O。任一失败都不阻塞启动。
   try {
-    await Future.wait([ApiConfig.loadOverride(), initTokenState()]);
+    await Future.wait([
+      ApiConfig.loadOverride(),
+      ApiConfig.loadAssetsBase(),
+      initTokenState(),
+    ]);
   } catch (_) {
     // 读失败退回内置地址 / 视为未登录。
   }
