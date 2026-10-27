@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///   3. 编译常量 [kDefaultApiBase]（--dart-define=API_BASE 或 defaultValue，兜底）
 const String kDefaultApiBase = String.fromEnvironment(
   'API_BASE',
-  defaultValue: 'https://wujiecloud.top',
+  defaultValue: 'https://example.com',
 );
 
 class ApiConfig {

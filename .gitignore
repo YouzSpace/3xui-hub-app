@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# 签名密钥（不提交，泄露=任何人都能冒充本 App 发更新）
+android/app/controlhub-app.jks
+android/app/key.properties
+android/.kotlin/
