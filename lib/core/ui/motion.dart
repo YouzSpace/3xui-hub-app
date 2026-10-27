@@ -12,7 +12,7 @@ abstract class Motion {
   static const Duration panel = Duration(milliseconds: 400); // 面板、卡片、抽屉
   static const Duration page = Duration(milliseconds: 500); // 整页转场
   static const Duration max = Duration(milliseconds: 700); // 任何动效上限
-  static const Duration splash = Duration(milliseconds: 500); // 开屏过渡总时长
+  static const Duration splash = Duration(milliseconds: 300); // 开屏过渡总时长
 
   // 曲线（禁止 linear）
   static const Curve easeOut = Curves.easeOutCubic; // 进场

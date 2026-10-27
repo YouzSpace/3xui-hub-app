@@ -13,14 +13,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 隐藏入口存的地址覆盖（通常为空 → 用编译常量），必须在 runApp 前完成，
   // 保证首个请求就拿到的最终值。
+  // 两个启动读操作并行：地址覆盖（SharedPreferences）+ token 回填（secure storage）
+  // 互不依赖，串行会白白多等一轮存储 I/O。任一失败都不阻塞启动。
   try {
-    await ApiConfig.loadOverride();
+    await Future.wait([ApiConfig.loadOverride(), initTokenState()]);
   } catch (_) {
-    // prefs 读失败不阻塞启动：退回内置地址。
+    // 读失败退回内置地址 / 视为未登录。
   }
-  // M2：先从 TokenStore 回填 token 状态，再 runApp ——
-  // GoRouter 首次 redirect 就能拿到持久化登录态（T2.5 杀进程重开仍登录）。
-  await initTokenState();
   // M4：VPN 引擎初始化（幂等）放后台，不阻塞 runApp 造成启动白屏；
   // 首次连接前 controller 还会再调一次 initialize（幂等，重复调用无害）。
   unawaited(() async {
