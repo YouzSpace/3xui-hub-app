@@ -41,6 +41,7 @@ jobs:
           DIST_DIR="$HOME/.gradle/wrapper/dists/gradle-9.3.1-all/9ot9r568e8zfvvd4mn8rbu1j0"
           mkdir -p "$DIST_DIR"
           curl -fL -o "$DIST_DIR/gradle-9.3.1-all.zip" "https://services.gradle.org/distributions/gradle-9.3.1-all.zip"
+          unzip -q "$DIST_DIR/gradle-9.3.1-all.zip" -d "$DIST_DIR"
           touch "$DIST_DIR/gradle-9.3.1-all.zip.ok"
 
       - name: 解码签名 keystore
