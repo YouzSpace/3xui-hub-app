@@ -89,6 +89,9 @@ flutter:
   # 装饰性世界地图（首页连接按钮背景）。
   assets:
     - assets/decor/world.svg
+    # 支付方式图标（微信 / 支付宝）。
+    - assets/pay/wx_pay.png
+    - assets/pay/ali_pay.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

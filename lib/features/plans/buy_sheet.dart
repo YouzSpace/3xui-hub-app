@@ -287,6 +287,13 @@ class _SpecSummary extends StatelessWidget {
   }
 }
 
+/// 根据支付方式名返回品牌图标资源路径；非微信/支付宝返回 null。
+String? _payIcon(String name) {
+  if (name.contains('微信')) return 'assets/pay/wx_pay.png';
+  if (name.contains('支付宝')) return 'assets/pay/ali_pay.png';
+  return null;
+}
+
 /// 支付方式单选：RadioGroup + RadioListTile（M3 当前 API，不用已弃用的 groupValue）。
 class _MethodsSection extends StatelessWidget {
   final AsyncValue<List<PayMethod>> methods;
@@ -340,12 +347,23 @@ class _MethodsSection extends StatelessWidget {
           child: Column(
             children: [
               for (final m in list)
-                RadioListTile<int>(
-                  value: m.id,
-                  title: Text(m.name),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
+                Builder(builder: (_) {
+                  final icon = _payIcon(m.name);
+                  return RadioListTile<int>(
+                    value: m.id,
+                    title: icon == null
+                        ? Text(m.name)
+                        : Row(
+                            children: [
+                              Image.asset(icon, width: 20, height: 20),
+                              const SizedBox(width: Sp.sm),
+                              Expanded(child: Text(m.name)),
+                            ],
+                          ),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  );
+                }),
             ],
           ),
         );
