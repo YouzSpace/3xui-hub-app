@@ -16,6 +16,10 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    env:
+      # CI 上 Java 访问 Gradle 域名常 Connection refused（curl 正常），强制 IPv4 并关系统代理。
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true -Djava.net.useSystemProxies=false"
+      GRADLE_OPTS: "-Djava.net.preferIPv4Stack=true -Djava.net.useSystemProxies=false"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
