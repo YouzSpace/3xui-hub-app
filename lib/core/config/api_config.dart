@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 或构建时 `--dart-define=API_BASE=https://客户域名`。
 const String kDefaultApiBase = String.fromEnvironment(
   'API_BASE',
-  defaultValue: 'https://43.159.45.110',
+  defaultValue: 'https://wujiecloud.top',
 );
 
 class ApiConfig {
