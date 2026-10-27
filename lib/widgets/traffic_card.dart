@@ -127,7 +127,7 @@ class _Normal extends StatelessWidget {
                 children: [
                   Text('剩余 ', style: text.bodySmall),
                   RollingNumber(
-                    text: formatBytes(summary.remaining, fractionDigits: 3),
+                    text: formatBytes(summary.remaining, fractionDigits: 2),
                     style: text.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],

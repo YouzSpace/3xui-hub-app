@@ -134,7 +134,7 @@ void main() {
 
     // 标题、两种支付方式、优惠码入口、按钮都在。
     expect(find.text('购买 月付'), findsOneWidget);
-    expect(find.byType(RadioListTile<int>), findsNWidgets(2));
+    expect(find.byType(Radio<int>), findsNWidgets(2));
     expect(find.text('支付宝'), findsOneWidget);
     expect(find.text('输入邀请码 / 兑换码'), findsOneWidget);
     expect(find.text('验证'), findsOneWidget);

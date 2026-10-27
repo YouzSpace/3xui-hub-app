@@ -349,19 +349,29 @@ class _MethodsSection extends StatelessWidget {
               for (final m in list)
                 Builder(builder: (_) {
                   final icon = _payIcon(m.name);
-                  return RadioListTile<int>(
-                    value: m.id,
-                    title: icon == null
-                        ? Text(m.name)
-                        : Row(
-                            children: [
-                              Image.asset(icon, width: 20, height: 20),
-                              const SizedBox(width: Sp.sm),
-                              Expanded(child: Text(m.name)),
-                            ],
+                  // 自定义 Row：单选圈 / 图标 / 文字间距完全可控（RadioListTile 的
+                  // leading-title 默认间距 + tap target 会让图标偏右）。
+                  return InkWell(
+                    onTap: () => onChanged(m.id),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: Sp.sm),
+                      child: Row(
+                        children: [
+                          Radio<int>(
+                            value: m.id,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
                           ),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                          const SizedBox(width: Sp.sm),
+                          if (icon != null) ...[
+                            Image.asset(icon, width: 20, height: 20),
+                            const SizedBox(width: Sp.sm),
+                          ],
+                          Expanded(child: Text(m.name)),
+                        ],
+                      ),
+                    ),
                   );
                 }),
             ],
