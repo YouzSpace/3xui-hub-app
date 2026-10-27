@@ -57,9 +57,7 @@ class PlansPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(plansProvider),
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(Sp.base, Sp.base, Sp.base,
-                  // 底栏浮在内容上（AppShell extendBody），留出玻璃高度。
-                  Sp.xxl + Sp.base),
+              padding: const EdgeInsets.all(Sp.base),
               itemCount: list.length,
               separatorBuilder: (_, _) => const SizedBox(height: Sp.md),
               itemBuilder: (context, i) {

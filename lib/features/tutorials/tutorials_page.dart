@@ -38,13 +38,7 @@ class TutorialsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () => ref.read(tutorialsProvider.notifier).refresh(),
             child: ListView(
-              // 底栏玻璃会盖住内容尾巴，底部多留一屏呼吸位。
-              padding: const EdgeInsets.fromLTRB(
-                Sp.base,
-                Sp.sm,
-                Sp.base,
-                Sp.xxl,
-              ),
+              padding: const EdgeInsets.all(Sp.base),
               children: [
                 for (final group in groups) ...[
                   _GroupSection(group: group),
