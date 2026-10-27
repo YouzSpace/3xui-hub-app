@@ -69,6 +69,31 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      - name: 给 Flutter 自带 gradle 构建补插件镜像（CI 访问 plugins.gradle.org 会被拒）
+        run: |
+          F="$(dirname "$(dirname "$(readlink -f "$(which flutter)")")")/packages/flutter_tools/gradle/settings.gradle.kts"
+          echo "目标: $F"
+          python3 - "$F" <<'PY'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          if 'pluginManagement' in s:
+              print('已有 pluginManagement，跳过')
+          else:
+              head = '''pluginManagement {
+              repositories {
+                  // CI 访问 plugins.gradle.org 被拒（v1.0.0 就败在这），改走阿里云镜像。
+                  maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+                  gradlePluginPortal()
+              }
+          }
+
+          '''
+              open(p, 'w').write(head + s)
+              print('已补 pluginManagement')
+          PY
+          head -20 "$F"
+
       - name: 构建 release APK（正式签名）
         env:
           KEYSTORE_PATH: android/app/controlhub-app.jks
