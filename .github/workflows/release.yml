@@ -36,6 +36,13 @@ jobs:
       - name: 拉依赖
         run: flutter pub get
 
+      - name: 预下载 Gradle 到 wrapper 缓存（避免 wrapper 下载 307/302 重定向失败）
+        run: |
+          DIST_DIR="$HOME/.gradle/wrapper/dists/gradle-9.3.1-all/9ot9r568e8zfvvd4mn8rbu1j0"
+          mkdir -p "$DIST_DIR"
+          curl -fL -o "$DIST_DIR/gradle-9.3.1-all.zip" "https://services.gradle.org/distributions/gradle-9.3.1-all.zip"
+          touch "$DIST_DIR/gradle-9.3.1-all.zip.ok"
+
       - name: 解码签名 keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
