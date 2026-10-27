@@ -40,6 +40,15 @@ jobs:
       - name: 拉依赖
         run: flutter pub get
 
+      - name: 诊断 Java vs curl 网络
+        run: |
+          echo "=== 代理变量 ==="
+          env | grep -i proxy || echo "无代理变量"
+          echo "=== curl ==="
+          curl -sI --max-time 10 https://plugins.gradle.org/m2/ 2>&1 | head -1
+          echo "=== Java DNS ==="
+          printf 'import java.net.*;\nSystem.out.println(java.util.Arrays.toString(InetAddress.getAllByName("plugins.gradle.org")));\n/exit\n' | jshell -s - 2>&1 | tail -4
+
       - name: 预下载 Gradle 到 wrapper 缓存（避免 wrapper 下载 307/302 重定向失败）
         run: |
           DIST_DIR="$HOME/.gradle/wrapper/dists/gradle-9.3.1-all/9ot9r568e8zfvvd4mn8rbu1j0"
