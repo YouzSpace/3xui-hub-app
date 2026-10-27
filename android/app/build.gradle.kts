@@ -4,8 +4,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// 包名：客户改品牌时只改这一处（namespace 与 applicationId 共用）。
+val appId = "com.controlhub.controlhub_app"
+
 android {
-    namespace = "com.controlhub.controlhub_app"
+    namespace = appId
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +18,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.controlhub.controlhub_app"
+        // 包名见顶部 appId，客户改品牌只改那一处。
+        applicationId = appId
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // minSdk 固定 23：flutter_vless 及项目契约要求（Android 6.0 起）。
