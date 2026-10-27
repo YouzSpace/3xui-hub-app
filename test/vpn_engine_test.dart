@@ -95,6 +95,11 @@ const _validLink =
     'vless://b831381d-6324-4d53-ad4f-8cda48b30811@example.com:443'
     '?encryption=none&security=tls&type=tcp#TestNode';
 
+/// UDP 传输节点：type=quic 让 measureDelay 走内核真延迟降级路径。
+const _quicLink =
+    'vless://b831381d-6324-4d53-ad4f-8cda48b30811@example.com:443'
+    '?encryption=none&type=quic&quicSecurity=none&key=abc#QuicNode';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -104,8 +109,8 @@ void main() {
   setUp(() {
     fake = _FakeVlessPlatform();
     VlessPlatform.instance = fake;
-    // TCP 预检注入 fake（恒可达）：单测不依赖真实网络。
-    engine = FlutterVlessEngine(tcpProbe: (_, _) async => true);
+    // TCP 握手测速注入 fake（返回 100ms）：单测不依赖真实网络。
+    engine = FlutterVlessEngine(tcpProbe: (_, _) async => 100);
   });
 
   test('initialize 幂等：重复调用只初始化一次', () async {
@@ -167,35 +172,37 @@ void main() {
     );
   });
 
-  test('measureDelay：正常返回毫秒数', () async {
+  test('measureDelay：TCP 节点走握手测速，返回握手耗时（不起内核）', () async {
     final delay = await engine.measureDelay(_validLink);
-    expect(delay, 120);
+    expect(delay, 100);
+    expect(fake.serverDelayCalls, 0, reason: 'TCP 握手测速不起 xray 进程');
+  });
+
+  test('measureDelay：握手失败（-1）→ null，不起内核', () async {
+    final unreachable = FlutterVlessEngine(tcpProbe: (_, _) async => -1);
+    expect(await unreachable.measureDelay(_validLink), isNull);
+    expect(fake.serverDelayCalls, 0);
+  });
+
+  test('measureDelay：UDP 节点（quic）降级内核真延迟', () async {
+    expect(await engine.measureDelay(_quicLink), 120);
     expect(fake.serverDelayCalls, 1);
   });
 
-  test('measureDelay：TCP 预检失败直接返回 null，不起内核测速', () async {
-    final unreachable =
-        FlutterVlessEngine(tcpProbe: (_, _) async => false);
-    expect(await unreachable.measureDelay(_validLink), isNull);
-    expect(fake.serverDelayCalls, 0, reason: 'TCP 连不上就不该起 xray 进程');
-  });
-
-  test('measureDelay：原生返回负值（-1）→ 归一为 null', () async {
-    fake.delayResult = -1;
-    expect(await engine.measureDelay(_validLink), isNull);
-  });
-
-  test('measureDelay：主端点失败换备用端点重试一次', () async {
+  test('measureDelay：UDP 节点真延迟失败换备用端点重试一次', () async {
     fake.delayFailuresBeforeSuccess = 1;
-    expect(await engine.measureDelay(_validLink), 120);
+    expect(await engine.measureDelay(_quicLink), 120);
     expect(fake.serverDelayCalls, 2);
     expect(fake.delayUrls[0], contains('gstatic'));
     expect(fake.delayUrls[1], contains('google'));
   });
 
-  test('measureDelay：探测异常 / 链接非法 → null 不抛出', () async {
-    fake.delayResult = null;
-    expect(await engine.measureDelay(_validLink), isNull);
+  test('measureDelay：UDP 节点原生返回负值（-1）→ 归一为 null', () async {
+    fake.delayResult = -1;
+    expect(await engine.measureDelay(_quicLink), isNull);
+  });
+
+  test('measureDelay：链接非法 → null 不抛出', () async {
     expect(await engine.measureDelay('garbage-link'), isNull);
   });
 }

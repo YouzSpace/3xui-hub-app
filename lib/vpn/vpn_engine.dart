@@ -55,8 +55,8 @@ abstract class VpnEngine {
   Future<int?> measureConnectedDelay();
 }
 
-/// TCP 预检函数签名：测速前先握手节点 host:port，不可达直接判失败。
-typedef TcpProbe = Future<bool> Function(String host, int port);
+/// TCP 握手测速函数签名：返回握手耗时毫秒，失败返回 -1。
+typedef TcpProbe = Future<int> Function(String host, int port);
 
 /// flutter_vless 1.1.6 的真实适配实现（API 依据包内 doc/api.md）。
 class FlutterVlessEngine implements VpnEngine {
@@ -71,11 +71,11 @@ class FlutterVlessEngine implements VpnEngine {
   static const String _delayProbeUrl2 =
       'https://www.google.com/generate_204';
 
-  /// TCP 预检（可注入，测试传 fake 避免依赖真实网络）。
+  /// TCP 握手测速（可注入，测试传 fake 避免依赖真实网络）。
   final TcpProbe _tcpProbe;
 
   FlutterVlessEngine({TcpProbe? tcpProbe})
-      : _tcpProbe = tcpProbe ?? tcpReachable;
+      : _tcpProbe = tcpProbe ?? tcpConnectTime;
 
   final StreamController<VpnStatus> _statusController =
       StreamController<VpnStatus>.broadcast();
@@ -175,17 +175,16 @@ class FlutterVlessEngine implements VpnEngine {
   Future<int?> measureDelay(String shareLink) async {
     try {
       final parsed = FlutterVless.parse(shareLink);
-      // TCP 预检：UDP 传输（quic/kcp）跳过，其余先 1 秒 TCP 握手，
-      // 连不上直接判失败，省起 xray 进程（对齐 v2rayNG 的快速失败）。
       final network = _transportNetwork(parsed);
-      if (!_isUdpTransport(network)) {
-        final reachable = await _tcpProbe(parsed.address, parsed.port);
-        if (!reachable) return null;
+      if (_isUdpTransport(network)) {
+        // UDP 传输（quic/kcp）TCP 握手测不了，降级内核真延迟。
+        final config = parsed.getFullConfiguration();
+        return await _probeServerDelay(config, _delayProbeUrl) ??
+            await _probeServerDelay(config, _delayProbeUrl2);
       }
-      final config = parsed.getFullConfiguration();
-      // 主端点失败 → 备用端点重试一次（对齐 v2rayNG 的双 URL 兜底）。
-      return await _probeServerDelay(config, _delayProbeUrl) ??
-          await _probeServerDelay(config, _delayProbeUrl2);
+      // TCP 握手测速：直连节点测物理延迟（快、数值低，对齐 v2rayNG tcping）。
+      final ms = await _tcpProbe(parsed.address, parsed.port);
+      return ms < 0 ? null : ms;
     } catch (_) {
       return null;
     }
