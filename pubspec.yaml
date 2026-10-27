@@ -126,13 +126,14 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# 图标与启动页生成配置（T1.11，占位图标，客户换品牌时替换 assets/branding/ 下两个图）。
+# 品牌配置：客户换品牌只改 assets/config/ 下两个文件——
+#   icon.png（图标，替换） + api_base.txt（服务器地址，编辑）。
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/branding/icon.png"
+  image_path: "assets/config/icon.png"
   adaptive_icon_background: "#6750A4"
-  adaptive_icon_foreground: "assets/branding/icon.png"
+  adaptive_icon_foreground: "assets/config/icon.png"
 
 flutter_native_splash:
   color: "#FFFFFF"
