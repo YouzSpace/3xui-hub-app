@@ -70,11 +70,12 @@ final subscriptionCacheClearerProvider = Provider<Future<void> Function()>(
 
 /// 清订阅缓存（**不清**主题、**不清**分应用代理）。
 ///
-/// 订阅相关持久化目前只有「选中节点」；键名仍从 [Prefs] 取，不新增字面量。
+/// 订阅相关持久化有「选中节点」与「节点测速结果」；键名仍从 [Prefs] 取，不新增字面量。
 Future<void> clearSubscriptionCache() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(Prefs.keySelectedNode);
+    await prefs.remove(Prefs.keyNodeLatency);
   } catch (_) {
     // 清缓存失败不该阻断退出/切换流程：下次拉订阅会覆盖旧值。
   }

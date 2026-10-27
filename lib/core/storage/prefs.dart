@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences 封装（非敏感数据，T1.5）。
@@ -9,6 +11,7 @@ class Prefs {
   static const String keyCacheMe = 'cache_me';
   static const String keyCacheSiteConfig = 'cache_site_config';
   static const String keyBypassChina = 'bypass_china';
+  static const String keyNodeLatency = 'node_latency';
 
   static Future<SharedPreferences> _p() => SharedPreferences.getInstance();
 
@@ -42,6 +45,25 @@ class Prefs {
 
   static Future<void> setBypassChina(bool v) async =>
       (await _p()).setBool(keyBypassChina, v);
+
+  /// 节点测速结果缓存（raw 分享链接 → 延迟毫秒）。JSON 字符串落盘，
+  /// 冷启动回填，避免每次重开 App 都要重测一遍。
+  static Future<Map<String, int>> getNodeLatency() async {
+    final raw = (await _p()).getString(keyNodeLatency);
+    if (raw == null || raw.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {};
+      return decoded.map(
+        (k, v) => MapEntry(k.toString(), (v as num).toInt()),
+      );
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  static Future<void> setNodeLatency(Map<String, int> map) async =>
+      (await _p()).setString(keyNodeLatency, jsonEncode(map));
 
   /// 清用户缓存（退出登录时用，保留主题/节点选择）。
   static Future<void> clearCache() async {

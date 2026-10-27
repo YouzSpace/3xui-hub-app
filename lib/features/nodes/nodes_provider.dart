@@ -59,11 +59,15 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
       for (final n in state.valueOrNull ?? const <Node>[])
         if (n.latencyMs != null) n.raw: n.latencyMs,
     };
+    // 冷启动：从 prefs 读上次会话的测速结果兜底（对齐 v2rayNG 的持久化）。
+    final persistedLatency = await _readPersistedLatency();
     final nodes = [
       for (final n in fetched)
         previousLatency.containsKey(n.raw)
             ? n.withLatency(previousLatency[n.raw])
-            : n,
+            : (persistedLatency.containsKey(n.raw)
+                ? n.withLatency(persistedLatency[n.raw])
+                : n),
     ];
 
     await ref.read(selectedNodeProvider.notifier).reconcile(nodes);
@@ -147,6 +151,7 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
       for (var i = 0; i < math.min(kMeasureConcurrency, targets.length); i++)
         worker(),
     ]);
+    await _persistLatency();
   }
 
   /// 把单个节点的测速结果实时写回 state（测一个刷新一次列表）。
@@ -156,6 +161,30 @@ class NodesNotifier extends AsyncNotifier<List<Node>> {
     state = AsyncData([
       for (final n in current) n.raw == raw ? n.withLatency(ms) : n,
     ]);
+  }
+
+  /// 测完一批后把延迟结果落盘（raw → ms），冷启动回填用。
+  Future<void> _persistLatency() async {
+    final nodes = state.valueOrNull;
+    if (nodes == null) return;
+    final map = <String, int>{
+      for (final n in nodes)
+        if (n.latencyMs != null) n.raw: n.latencyMs!,
+    };
+    try {
+      await Prefs.setNodeLatency(map);
+    } catch (_) {
+      // 写盘失败不影响测速结果（内存态已更新）。
+    }
+  }
+
+  /// 读上次会话落盘的测速结果；失败返回空表（不阻断订阅加载）。
+  Future<Map<String, int>> _readPersistedLatency() async {
+    try {
+      return await Prefs.getNodeLatency();
+    } catch (_) {
+      return const {};
+    }
   }
 
   static Node? _fastest(List<Node> nodes) {

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_vless/flutter_vless.dart';
 
+import 'tcp_probe.dart';
 import 'vpn_state.dart';
 
 /// VPN 引擎层异常：message 直接可展示给用户（同 ApiException 约定）。
@@ -54,6 +55,9 @@ abstract class VpnEngine {
   Future<int?> measureConnectedDelay();
 }
 
+/// TCP 预检函数签名：测速前先握手节点 host:port，不可达直接判失败。
+typedef TcpProbe = Future<bool> Function(String host, int port);
+
 /// flutter_vless 1.1.6 的真实适配实现（API 依据包内 doc/api.md）。
 class FlutterVlessEngine implements VpnEngine {
   /// iOS/macOS Packet Tunnel 扩展用基础 bundle id；Android 不使用。
@@ -62,6 +66,16 @@ class FlutterVlessEngine implements VpnEngine {
   /// 测速探测端点（204 无正文，最快返回）。
   static const String _delayProbeUrl =
       'https://www.gstatic.com/generate_204';
+
+  /// 备用测速端点：主端点（gstatic）失败时换它重试一次（对齐 v2rayNG）。
+  static const String _delayProbeUrl2 =
+      'https://www.google.com/generate_204';
+
+  /// TCP 预检（可注入，测试传 fake 避免依赖真实网络）。
+  final TcpProbe _tcpProbe;
+
+  FlutterVlessEngine({TcpProbe? tcpProbe})
+      : _tcpProbe = tcpProbe ?? tcpReachable;
 
   final StreamController<VpnStatus> _statusController =
       StreamController<VpnStatus>.broadcast();
@@ -161,24 +175,61 @@ class FlutterVlessEngine implements VpnEngine {
   Future<int?> measureDelay(String shareLink) async {
     try {
       final parsed = FlutterVless.parse(shareLink);
-      // 测速加超时：引擎/节点卡住时不能拖死测速 worker（否则转圈永不结束）。
-      final delay = await _vless
-          .getServerDelay(
-            config: parsed.getFullConfiguration(),
-            url: _delayProbeUrl,
-          )
-          .timeout(const Duration(seconds: 15));
-      return delay;
+      // TCP 预检：UDP 传输（quic/kcp）跳过，其余先 1 秒 TCP 握手，
+      // 连不上直接判失败，省起 xray 进程（对齐 v2rayNG 的快速失败）。
+      final network = _transportNetwork(parsed);
+      if (!_isUdpTransport(network)) {
+        final reachable = await _tcpProbe(parsed.address, parsed.port);
+        if (!reachable) return null;
+      }
+      final config = parsed.getFullConfiguration();
+      // 主端点失败 → 备用端点重试一次（对齐 v2rayNG 的双 URL 兜底）。
+      return await _probeServerDelay(config, _delayProbeUrl) ??
+          await _probeServerDelay(config, _delayProbeUrl2);
     } catch (_) {
       return null;
     }
   }
 
+  /// 单次内核测速：原生返回负值（如 -1）表示失败，统一归一为 null。
+  Future<int?> _probeServerDelay(String config, String url) async {
+    try {
+      // 测速加超时：引擎/节点卡住时不能拖死测速 worker（否则转圈永不结束）。
+      final delay = await _vless
+          .getServerDelay(config: config, url: url)
+          .timeout(const Duration(seconds: 15));
+      return delay < 0 ? null : delay;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 从解析结果的 outbound streamSettings 拿实际传输类型（tcp/ws/quic/kcp…）。
+  String? _transportNetwork(FlutterVlessURL parsed) {
+    try {
+      final streamSettings = parsed.outbound1['streamSettings'];
+      if (streamSettings is Map) {
+        return streamSettings['network']?.toString().toLowerCase();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// quic/kcp 是 UDP 传输，TCP 握手测不了，跳过预检直接走内核测。
+  bool _isUdpTransport(String? network) =>
+      network == 'quic' || network == 'kcp';
+
   @override
   Future<int?> measureConnectedDelay() async {
+    // 主端点失败 → 备用端点重试一次（对齐 v2rayNG 的双 URL 兜底）。
+    return await _probeConnectedDelay(_delayProbeUrl) ??
+        await _probeConnectedDelay(_delayProbeUrl2);
+  }
+
+  Future<int?> _probeConnectedDelay(String url) async {
     try {
       final delay = await _vless
-          .getConnectedServerDelay(url: _delayProbeUrl)
+          .getConnectedServerDelay(url: url)
           .timeout(const Duration(seconds: 15));
       // 原生返回负值（如 -1）表示探测失败。
       return delay < 0 ? null : delay;

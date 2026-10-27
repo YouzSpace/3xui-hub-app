@@ -271,6 +271,26 @@ void main() {
       expect(nodes[1].latencyMs, 66);
     });
 
+    test('测速结果落盘，冷启动（新容器）从 prefs 回填', () async {
+      repo.nodes = [_node('HK'), _node('JP')];
+      final container = makeContainer();
+      await container.read(nodesProvider.future);
+
+      engine.latency[repo.nodes[0].raw] = 50;
+      engine.latency[repo.nodes[1].raw] = 90;
+      await container.read(nodesProvider.notifier).measureAll();
+      expect(await Prefs.getNodeLatency(), {
+        repo.nodes[0].raw: 50,
+        repo.nodes[1].raw: 90,
+      });
+
+      // 模拟重开 App：新容器 + 同一份 mock prefs，延迟应从 prefs 回填。
+      final reopened = makeContainer();
+      final nodes = await reopened.read(nodesProvider.future);
+      expect(nodes[0].latencyMs, 50);
+      expect(nodes[1].latencyMs, 90);
+    });
+
     test('自动选择：打开后立刻测速并切到最快节点，开关写进 prefs', () async {
       repo.nodes = [_node('HK'), _node('JP'), _node('US')];
       final container = makeContainer();

@@ -20,6 +20,12 @@ class _FakeVlessPlatform extends VlessPlatform {
   Object? startError;
   int? delayResult = 120;
 
+  /// 前 N 次测速调用先失败（模拟主端点不通，验证备用端点重试）。
+  int delayFailuresBeforeSuccess = 0;
+
+  /// 记录每次测速用到的 url（验证主/备用端点切换）。
+  final List<String> delayUrls = [];
+
   void Function(VlessStatus status)? onStatusChanged;
 
   @override
@@ -74,6 +80,11 @@ class _FakeVlessPlatform extends VlessPlatform {
     String? geoAssetsDirectory,
   }) async {
     serverDelayCalls++;
+    delayUrls.add(url);
+    if (delayFailuresBeforeSuccess > 0) {
+      delayFailuresBeforeSuccess--;
+      throw const VpnException('probe failed');
+    }
     if (delayResult == null) throw const VpnException('probe failed');
     return delayResult!;
   }
@@ -93,7 +104,8 @@ void main() {
   setUp(() {
     fake = _FakeVlessPlatform();
     VlessPlatform.instance = fake;
-    engine = FlutterVlessEngine();
+    // TCP 预检注入 fake（恒可达）：单测不依赖真实网络。
+    engine = FlutterVlessEngine(tcpProbe: (_, _) async => true);
   });
 
   test('initialize 幂等：重复调用只初始化一次', () async {
@@ -159,6 +171,26 @@ void main() {
     final delay = await engine.measureDelay(_validLink);
     expect(delay, 120);
     expect(fake.serverDelayCalls, 1);
+  });
+
+  test('measureDelay：TCP 预检失败直接返回 null，不起内核测速', () async {
+    final unreachable =
+        FlutterVlessEngine(tcpProbe: (_, _) async => false);
+    expect(await unreachable.measureDelay(_validLink), isNull);
+    expect(fake.serverDelayCalls, 0, reason: 'TCP 连不上就不该起 xray 进程');
+  });
+
+  test('measureDelay：原生返回负值（-1）→ 归一为 null', () async {
+    fake.delayResult = -1;
+    expect(await engine.measureDelay(_validLink), isNull);
+  });
+
+  test('measureDelay：主端点失败换备用端点重试一次', () async {
+    fake.delayFailuresBeforeSuccess = 1;
+    expect(await engine.measureDelay(_validLink), 120);
+    expect(fake.serverDelayCalls, 2);
+    expect(fake.delayUrls[0], contains('gstatic'));
+    expect(fake.delayUrls[1], contains('google'));
   });
 
   test('measureDelay：探测异常 / 链接非法 → null 不抛出', () async {
